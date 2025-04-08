@@ -17,7 +17,7 @@ url = (
 )
 
 
-def download_wordlist(url, name):
+def download_wordlist(url: str, name: str):
     wordlist_path = os.path.join(wordlist_dir, name)
 
     if os.path.exists(wordlist_path):
