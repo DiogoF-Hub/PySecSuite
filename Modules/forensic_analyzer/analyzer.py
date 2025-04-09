@@ -5,9 +5,6 @@ import os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 upload_dir = os.path.join(root_dir, "Uploads")
 
-if not os.path.exists(upload_dir):
-    os.makedirs(upload_dir)
-
 
 def check_exiftool_installed():
     try:
