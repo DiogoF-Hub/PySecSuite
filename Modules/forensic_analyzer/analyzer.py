@@ -30,54 +30,6 @@ def compare_time_difference(time_difference: float):
         )
 
 
-def extract_all_metadata(file_path: str, file_name: str):
-    try:
-        with ExifTool() as et:
-            # Step 1: Run ExifTool and get metadata list (usually 1 item)
-            metadata_list = et.execute_json("-j", file_path)
-
-            # Step 2: Check if list is not empty
-            if metadata_list and isinstance(metadata_list, list):
-                metadata = metadata_list[0]  # First file's metadata
-            else:
-                metadata = {}  # Fallback if something went wrong
-
-            print(f"\nMetadata for: {file_name}\n")
-            for tag, value in metadata.items():
-                print(f"{tag}: {value}")
-    except Exception as e:
-        print(f"Failed to extract metadata: {e}")
-
-
-def extract_metadata_all_timestamp(file_path: str, file_name: str):
-    try:
-        with ExifTool() as et:
-            # Step 1: Run ExifTool and get metadata list (usually 1 item)
-            metadata_list = et.execute_json("-j", file_path)
-
-            # Step 2: Check if list is not empty
-            if metadata_list and isinstance(metadata_list, list):
-                metadata = metadata_list[0]  # First file's metadata
-            else:
-                metadata = {}  # Fallback if something went wrong
-
-            # Filter and print timestamp-related tags
-            timestamp_keywords = ["date", "time"]
-            found_any = False
-            print(f"\nTimestamps for: {file_name}\n")
-
-            for tag, value in metadata.items():
-                if any(keyword in tag.lower() for keyword in timestamp_keywords):
-                    print(f"{tag}: {value}")
-                    found_any = True
-
-            if not found_any:
-                print(f"No timestamp-related metadata found in {file_name}.")
-
-    except Exception as e:
-        print(f"Failed to extract timestamp: {e}")
-
-
 def analyze_image_metadata(file_path: str, file_name: str):
     try:
         with ExifTool() as et:
@@ -116,13 +68,69 @@ def analyze_image_metadata(file_path: str, file_name: str):
 
 
 def analyze_pdf_metadata(file_path: str, file_name: str):
-    # todo: Implement PDF metadata extraction and timestamp check
-    return
+    try:
+        with ExifTool() as et:
+            metadata_list = et.execute_json("-j", file_path)
+            metadata = metadata_list[0] if metadata_list else {}
+
+            # Get relevant timestamps
+            pdf_create = metadata.get("PDF:CreateDate")
+            pdf_modify = metadata.get("PDF:ModifyDate")
+
+            print(f"\nAnalyzing PDF: {file_name}")
+            print(f"PDF Creation Date     : {pdf_create}")
+            print(f"PDF Last Modified Date: {pdf_modify}")
+
+            if pdf_create and pdf_modify:
+                # Clean date strings (remove timezone, just like in images)
+                create_clean = pdf_create.split("+")[0].strip()
+                modify_clean = pdf_modify.split("+")[0].strip()
+
+                # Convert to datetime objects
+                create_dt = datetime.strptime(create_clean, "%Y:%m:%d %H:%M:%S")
+                modify_dt = datetime.strptime(modify_clean, "%Y:%m:%d %H:%M:%S")
+
+                # Compare
+                time_difference = (modify_dt - create_dt).total_seconds()
+                compare_time_difference(time_difference)
+
+            else:
+                print("Not enough timestamp information to perform consistency check.")
+
+    except Exception as e:
+        print(f"Failed to analyze PDF metadata: {e}")
 
 
 def analyze_docx_metadata(file_path: str, file_name: str):
-    # todo: Implement DOCX metadata extraction and timestamp check
-    return
+    try:
+        with ExifTool() as et:
+            metadata_list = et.execute_json("-j", file_path)
+            metadata = metadata_list[0] if metadata_list else {}
+
+            # Try to get creation and modification dates
+            create_raw = metadata.get("Document:CreateDate")
+            modify_raw = metadata.get("Document:ModifyDate")
+
+            print(f"\nAnalyzing DOCX: {file_name}")
+            print(f"Create Date : {create_raw}")
+            print(f"Modify Date : {modify_raw}")
+
+            if create_raw and modify_raw:
+                # Clean the strings (no timezone expected but be safe)
+                create_clean = create_raw.split("+")[0].strip()
+                modify_clean = modify_raw.split("+")[0].strip()
+
+                # Convert to datetime objects
+                create_dt = datetime.strptime(create_clean, "%Y:%m:%d %H:%M:%S")
+                modify_dt = datetime.strptime(modify_clean, "%Y:%m:%d %H:%M:%S")
+
+                time_difference = (modify_dt - create_dt).total_seconds()
+                compare_time_difference(time_difference)
+            else:
+                print("Not enough timestamp information to perform consistency check.")
+
+    except Exception as e:
+        print(f"Failed to analyze DOCX metadata: {e}")
 
 
 def analyze_file(file_name: str):
