@@ -27,6 +27,7 @@ def verify_file_checksum(file_path: str, expected_hash: str, hash_algorithm: str
 
         # Read file and update hash
         with open(file_path, "rb") as f:
+            # := walrus operator is used here for readability because it allows us to read and update the hash in one line
             while chunk := f.read(4096):
                 hasher.update(chunk)
 

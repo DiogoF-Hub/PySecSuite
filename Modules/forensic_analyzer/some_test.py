@@ -1,7 +1,12 @@
 from exiftool import ExifTool
+import os
+
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+upload_dir = os.path.join(root_dir, "Uploads")
 
 
-def extract_all_metadata(file_path: str, file_name: str):
+def extract_all_metadata(file_name: str):
+    file_path = os.path.join(upload_dir, file_name)
     try:
         with ExifTool() as et:
             # Step 1: Run ExifTool and get metadata list (usually 1 item)
@@ -20,7 +25,8 @@ def extract_all_metadata(file_path: str, file_name: str):
         print(f"Failed to extract metadata: {e}")
 
 
-def extract_metadata_all_timestamp(file_path: str, file_name: str):
+def extract_metadata_all_timestamp(file_name: str):
+    file_path = os.path.join(upload_dir, file_name)
     try:
         with ExifTool() as et:
             # Step 1: Run ExifTool and get metadata list (usually 1 item)
@@ -47,3 +53,6 @@ def extract_metadata_all_timestamp(file_path: str, file_name: str):
 
     except Exception as e:
         print(f"Failed to extract timestamp: {e}")
+
+
+extract_metadata_all_timestamp("test.docx")
