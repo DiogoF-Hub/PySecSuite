@@ -2,6 +2,9 @@ import os
 import json
 import requests
 
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+upload_dir = os.path.join(root_dir, "Uploads")
+
 
 def reverse_image_search(image_path):
     if not os.path.isfile(image_path):
@@ -30,5 +33,6 @@ def reverse_image_search(image_path):
 
 
 # Example usage
-image_path = input("Enter the full path to the image you want to search: ").strip()
+# image_path = input("Enter the full path to the image you want to search: ").strip()
+image_path = os.path.join(upload_dir, "ss.jpg")  # Replace with your image path
 reverse_image_search(image_path)
