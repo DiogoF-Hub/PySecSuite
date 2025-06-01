@@ -1,0 +1,1 @@
+# Saves scan results to .csv or .json

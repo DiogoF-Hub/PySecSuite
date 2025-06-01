@@ -1,0 +1,1 @@
+# Calls all modules in order → full scan mode
