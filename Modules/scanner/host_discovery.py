@@ -64,4 +64,4 @@ if __name__ == '__main__':
         print(f" - {host}")
     print(f"Scan completed. {len(found_hosts)} hosts found.")
 
-    export_to_csv(found_hosts)
+    export_to_csv(found_hosts) 
