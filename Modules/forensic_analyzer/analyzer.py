@@ -2,6 +2,7 @@ from exiftool import ExifTool
 from datetime import datetime
 import zipfile
 import os
+import filetype
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 upload_dir = os.path.join(root_dir, "Uploads")
@@ -14,6 +15,26 @@ def check_exiftool_installed():
     except Exception as e:
         print(f"ExifTool is not installed or not found: {e}")
         return False
+
+
+def validate_file_extension(file_path: str):
+    kind = filetype.guess(file_path)
+    declared_ext = os.path.splitext(file_path)[1].lower()
+
+    if not kind:
+        print("Could not determine actual file type (possibly unknown or corrupted).")
+        return True  # Proceed with analysis anyway
+
+    actual_ext = f".{kind.extension}"
+
+    print(f"Declared extension: {declared_ext}")
+    print(f"Actual file type  : {actual_ext} ({kind.mime})")
+
+    if actual_ext != declared_ext:
+        print("WARNING: File extension does not match actual file type!")
+        return False  # Skip analysis if extensions do not match
+
+    return True
 
 
 def compare_time_difference(time_difference: float):
@@ -112,8 +133,6 @@ def analyze_pdf_metadata(file_path: str, file_name: str):
                 print("Not enough timestamp information to perform consistency check.")
 
             # ---------- Embedded Object Check ----------
-            # Get the value and convert to lowercase so the comparison is case-insensitive
-            # If the key doesn't exist, default to an empty string to avoid crashing with .lower()
             has_javascript = metadata.get("PDF:JavaScript", "").lower() == "yes"
             has_embedded_files = (
                 metadata.get("PDF:HasEmbeddedFiles", "").lower() == "yes"
@@ -134,6 +153,33 @@ def analyze_pdf_metadata(file_path: str, file_name: str):
                 print("Interactive XFA forms detected in the PDF.")
             else:
                 print("No interactive XFA forms detected in the PDF.")
+
+        # ---------- Suspicious Pattern Check ----------
+        suspicious_keywords = [
+            "powershell",
+            "cmd",
+            "base64",
+            "http://",
+            "https://",
+            "ftp://",
+            "curl",
+            "wget",
+        ]
+        try:
+            with open(file_path, "rb") as f:
+                content = f.read().decode(errors="ignore").lower()
+
+            hits = [kw for kw in suspicious_keywords if kw in content]
+
+            if hits:
+                print("\nSuspicious patterns detected in raw PDF content:")
+                for kw in hits:
+                    print(f" - Keyword '{kw}' found")
+            else:
+                print("\nNo suspicious patterns found in raw content.")
+
+        except Exception as e:
+            print(f"Error scanning PDF for patterns: {e}")
 
     except Exception as e:
         print(f"Failed to analyze PDF metadata: {e}")
@@ -173,37 +219,65 @@ def analyze_docx_metadata(file_path: str, file_name: str):
     except Exception as e:
         print(f"Failed to extract metadata: {e}")
 
-    # --------- Macro & Embedded Object Check (using zipfile) ---------
+    # --------- Macro, Embedded Object, and Suspicious Pattern Check ---------
     try:
         with zipfile.ZipFile(file_path, "r") as zip_ref:
             file_list = zip_ref.namelist()
 
             has_macros = False
             embedded_objects = []
+            suspicious_keywords = [
+                "powershell",
+                "cmd",
+                "base64",
+                "http://",
+                "https://",
+                "ftp://",
+                "curl",
+                "wget",
+            ]
+            suspicious_hits = []
 
-            # Go through every file in the .docx archive once
-            for file_name in file_list:
-                lower_name = file_name.lower()
+            for inner_file in file_list:
+                lower_name = inner_file.lower()
 
-                # Check for macros
                 if "vbaproject.bin" in lower_name:
                     has_macros = True
 
-                # Check for embedded files
                 if "embeddings/" in lower_name:
-                    embedded_objects.append(file_name)
+                    embedded_objects.append(inner_file)
 
+                # Suspicious pattern detection inside files
+                try:
+                    with zip_ref.open(inner_file) as f:
+                        content = f.read().decode(errors="ignore").lower()
+                        for keyword in suspicious_keywords:
+                            if keyword in content:
+                                suspicious_hits.append((inner_file, keyword))
+                except:
+                    continue  # skip unreadable files
+
+            # Print macro detection
             if has_macros:
                 print("Macros detected in the document.")
             else:
                 print("No macros detected in the document.")
 
+            # Print embedded objects
             if embedded_objects:
-                print(f"Embedded objects found :")
+                print("Embedded objects found:")
                 for item in embedded_objects:
-                    print(f"{item}")
+                    print(f" - {item}")
             else:
-                print("None")
+                print("No embedded objects found.")
+
+            # Print suspicious keywords
+            if suspicious_hits:
+                print("\nSuspicious patterns detected:")
+                for fname, keyword in suspicious_hits:
+                    print(f" - Keyword '{keyword}' found in {fname}")
+            else:
+                print("\nNo suspicious patterns found.")
 
     except Exception as e:
         print(f"Failed to analyze DOCX for embedded content: {e}")
@@ -214,24 +288,25 @@ def analyze_file(file_name: str):
 
     if not check_exiftool_installed():
         print("ExifTool is not installed.")
-        return
+        return False
 
     if not os.path.isfile(file_path):
         print(f"File not found: {file_path}")
         return False
 
-    file_ext = os.path.splitext(file_path)[1].lower()  # e.g. ".jpg"
+    if not validate_file_extension(file_path):
+        print("Analysis skipped due to mismatched file type.")
+        return False
+
+    file_ext = os.path.splitext(file_path)[1].lower()
 
     if file_ext in [".jpg", ".jpeg", ".png"]:
-        # Call your image metadata + timestamp check
         analyze_image_metadata(file_path, file_name)
 
     elif file_ext == ".pdf":
-        # Run PDF-specific analysis
         analyze_pdf_metadata(file_path, file_name)
 
     elif file_ext in [".docx", ".docm"]:
-        # Run DOCX-specific analysis
         analyze_docx_metadata(file_path, file_name)
 
     else:
