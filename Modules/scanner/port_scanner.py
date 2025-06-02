@@ -4,6 +4,22 @@ import csv
 import os
 from concurrent.futures import ThreadPoolExecutor
 
+import argparse
+
+BANNER = r"""
+8888888b.            .d8888b.                    .d8888b.           d8b 888    
+888   Y88b          d88P  Y88b                  d88P  Y88b          Y8P 888    
+888    888          Y88b.                       Y88b.                   888    
+888   d88P 888  888  "Y888b.    .d88b.   .d8888b "Y888b.   888  888 888 888888 
+8888888P"  888  888     "Y88b. d8P  Y8b d88P"       "Y88b. 888  888 888 888    
+888        888  888       "888 88888888 888           "888 888  888 888 888    
+888        Y88b 888 Y88b  d88P Y8b.     Y88b.   Y88b  d88P Y88b 888 888 Y88b.  
+888         "Y88888  "Y8888P"   "Y8888   "Y8888P "Y8888P"   "Y88888 888  "Y888 
+                888
+           Y8b d88P
+            "Y88P"
+"""
+
 
 def scan_port(ip, port, timeout=1.0):
     try:
@@ -59,6 +75,7 @@ def parse_port_range(port_range):
 
 
 if __name__ == "__main__":
+    print(BANNER)
     import argparse
 
     parser = argparse.ArgumentParser(
