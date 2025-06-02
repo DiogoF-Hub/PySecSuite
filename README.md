@@ -1,7 +1,7 @@
 # PySecSuite
 Python Cybersecurity Toolkit: Multi-purpose Security and Penetration Testing Suite
 
-![Image](https://github.com/user-attachments/assets/c499e637-2767-458d-8285-661ba19ae5d5) 
+![Image](https://github.com/user-attachments/assets/1873d293-04d0-4e27-9019-f454d0aefc75)
 
 This project is developed for educational purposes only.
 # PySecSuite - Python Cybersecurity Toolkit

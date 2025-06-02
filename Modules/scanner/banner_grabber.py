@@ -1,0 +1,1 @@
+# Connects to open ports and retrieves service information (if possible)
