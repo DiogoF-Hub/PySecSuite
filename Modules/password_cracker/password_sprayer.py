@@ -26,18 +26,28 @@ def get_login_form(login_url):
 
 
 def run_bruteforce_streamlit(
-    login_url, username, wordlist_path, update_progress, success_keyword="dashboard"
+    login_url,
+    username,
+    wordlist_path,
+    update_progress,
+    user_field_override=None,
+    pass_field_override=None,
+    success_keyword="dashboard",
 ):
 
     # Load the form structure and session
     session, action, method, form_data = get_login_form(login_url)
 
-    # Try to detect the username and password field names
-    username_field = next((k for k in form_data if "user" in k.lower()), None)
-    password_field = next((k for k in form_data if "pass" in k.lower()), None)
+    # Use manual overrides if provided, otherwise try to auto-detect
+    username_field = user_field_override or next(
+        (k for k in form_data if "user" in k.lower()), None
+    )
+    password_field = pass_field_override or next(
+        (k for k in form_data if "pass" in k.lower()), None
+    )
 
     if not username_field or not password_field:
-        return "[!] Could not identify login fields. Manual adjustment needed."
+        return "[!] Could not identify login fields. Please provide field names."
 
     # Load wordlist into memory
     with open(wordlist_path, "r", encoding="latin-1") as f:
@@ -64,8 +74,6 @@ def run_bruteforce_streamlit(
             update_progress(100)
             return f"[+] SUCCESS: Password found: **{password}**"
 
-        # Update progress bar
-        progress = int(((i + 1) / total) * 100)
-        update_progress(progress)
+        update_progress(int(((i + 1) / total) * 100))
 
     return "[-] Password not found in wordlist."
