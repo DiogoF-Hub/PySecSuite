@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import time
 
 
 def get_login_form(login_url):
@@ -33,6 +34,7 @@ def run_bruteforce_streamlit(
     user_field_override=None,
     pass_field_override=None,
     success_keyword="dashboard",
+    delay=0,
 ):
 
     # Load the form structure and session
@@ -75,5 +77,8 @@ def run_bruteforce_streamlit(
             return f"[+] SUCCESS: Password found: **{password}**"
 
         update_progress(int(((i + 1) / total) * 100))
+
+        # Wait for a short delay to avoid overwhelming the server
+        time.sleep(delay)
 
     return "[-] Password not found in wordlist."
