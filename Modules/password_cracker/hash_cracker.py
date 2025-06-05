@@ -1,17 +1,24 @@
 import re
 import hashlib
+import os
+
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+assets_dir = os.path.join(root_dir, "Assets")
+wordlist_dir = os.path.join(assets_dir, "wordlists")
+wordlist_file = os.path.join(wordlist_dir, "rockyou.txt")
 
 
 def identify_hash_type(hash_string):
-    hash_string = hash_string.strip()
-
     # Specific patterns for common hash types
     if re.match(r"^\$2[aby]\$.{56}$", hash_string):  # bcrypt
-        return "bcrypt"
+        print(f"[!] BCRYPT is not supported by hashlib (use Hashcat).")
+        return False
     elif re.match(r"^\$argon2(id|i|d)\$", hash_string):  # argon2
-        return "argon2"
+        print(f"[!] ARGON2 is not supported by hashlib (use Hashcat).")
+        return False
     elif re.match(r"^[a-fA-F0-9]{32}$", hash_string):  # MD5
-        return "md5_or_ntlm"
+        print("[!] Detected 32-character hex hash (MD5 or NTLM). Defaulting to MD5.")
+        return "md5"
     elif re.match(r"^[a-fA-F0-9]{40}$", hash_string):  # SHA1
         return "sha1"
     elif re.match(r"^[a-fA-F0-9]{64}$", hash_string):  # SHA256
@@ -19,27 +26,23 @@ def identify_hash_type(hash_string):
     elif re.match(r"^[a-fA-F0-9]{128}$", hash_string):  # SHA512
         return "sha512"
     else:
-        return "unknown"
+        print("[!] Could not identify hash algorithm.")
+        return False
 
 
-def crack_hash(hash_to_crack, wordlist_path="Assets/wordlists/rockyou.txt"):
+def single_crack_hash(hash_to_crack):
+    hash_to_crack = hash_to_crack.strip()
     algorithm = identify_hash_type(hash_to_crack)
 
-    if algorithm == "unknown":
-        print("[!] Could not identify hash algorithm.")
+    if not algorithm:
+        print("[!] Unsupported hash type or algorithm could not be identified.")
         return None
-    elif algorithm in ["bcrypt", "argon2"]:
-        print(f"[!] {algorithm.upper()} is not supported by hashlib (use Hashcat).")
-        return None
-    elif algorithm == "md5_or_ntlm":
-        print("[!] Detected 32-character hex hash (MD5 or NTLM). Defaulting to MD5.")
-        algorithm = "md5"
 
     print(f"[~] Cracking using detected algorithm: {algorithm.upper()}")
 
     try:
         # Open the wordlist file
-        with open(wordlist_path, "r", encoding="latin-1") as f:
+        with open(wordlist_file, "r", encoding="latin-1") as f:
             # Read the wordlist file line by line with index
             for idx, word in enumerate(f):
                 word = word.strip()
@@ -54,9 +57,6 @@ def crack_hash(hash_to_crack, wordlist_path="Assets/wordlists/rockyou.txt"):
                     hashed = hashlib.sha256(word_bytes).hexdigest()
                 elif algorithm == "sha512":
                     hashed = hashlib.sha512(word_bytes).hexdigest()
-                else:
-                    print(f"[!] Unsupported algorithm: {algorithm}")
-                    return None
 
                 if hashed.lower() == hash_to_crack.lower():  # Compare in lowercase
                     # If a match is found, print the password and return it

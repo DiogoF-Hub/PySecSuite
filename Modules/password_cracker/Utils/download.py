@@ -5,12 +5,6 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 assets_dir = os.path.join(root_dir, "Assets")
 wordlist_dir = os.path.join(assets_dir, "Wordlists")
 
-if not os.path.exists(assets_dir):
-    os.makedirs(assets_dir)
-
-if not os.path.exists(wordlist_dir):
-    os.makedirs(wordlist_dir)
-
 
 url = (
     "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt"
