@@ -25,22 +25,28 @@ This page runs your existing `scanner.py` exactly as if you typed on the command
 
 
 
-After it finishes, all generated CSVs (including `alive_hosts.csv` and each `<host>_ports.csv`) will be displayed as tables with Download buttons.
+
+But instead of forcing you to type something like `45.33.32.156 - 159`, you can simply check “Use IP Range?” and enter a **Start IP** and **End IP**, and we’ll iterate for you.
+
+
+
+1
+You can choose between scanning a single IP/CIDR or an IP range.  
+After it finishes, only the `<IP>_ports.csv` files will be displayed as tables with Download buttons.
 """
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DETERMINE PROJECT ROOT AND SCANNER.PY PATH
 # ──────────────────────────────────────────────────────────────────────────────
-# If this file lives under Pages/, then project_root is one level up:
 PAGE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = PAGE_DIR.parent  # assumes Pages/ is directly under the project root
+PROJECT_ROOT = PAGE_DIR.parent  # assumes Pages/ is directly under project root
 SCANNER_PATH = PROJECT_ROOT / "Modules" / "scanner" / "scanner.py"
 
 if not SCANNER_PATH.is_file():
     st.error(
         f"❌ Could not find `scanner.py` at:\n\n  {SCANNER_PATH}\n\n"
-        "Please confirm your folder structure. For example:\n\n"
+        "Please confirm your folder structure:\n\n"
         "project_root/\n"
         "├─ Pages/\n"
         "│  └─ network_scanner_page.py  ← this file\n"
@@ -51,22 +57,47 @@ if not SCANNER_PATH.is_file():
     st.stop()
 
 # ──────────────────────────────────────────────────────────────────────────────
+# CHOOSE SCAN MODE (outside the form so dynamic fields show immediately)
+# ──────────────────────────────────────────────────────────────────────────────
+scan_type = st.radio(
+    "Scan Mode:",
+    options=["Single IP/CIDR", "IP Range"],
+    index=0,
+    help="Choose whether to scan a single IP/CIDR or specify a start/end IP range.",
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
 # STREAMLIT FORM FOR USER INPUT
 # ──────────────────────────────────────────────────────────────────────────────
 with st.form("cli_form"):
-    col1, col2 = st.columns([2, 1])
-    with col1:
+    if scan_type == "IP Range":
+        col1, col2 = st.columns(2)
+        with col1:
+            start_ip_input = st.text_input(
+                "Start IP",
+                value="45.33.32.156",
+                help="Beginning of the IP range (IPv4).",
+            )
+        with col2:
+            end_ip_input = st.text_input(
+                "End IP",
+                value="45.33.32.159",
+                help="End of the IP range (IPv4). Must be ≥ Start IP.",
+            )
+        target_input = None
+    else:
         target_input = st.text_input(
-            "Target (single IP or CIDR, e.g. 192.168.1.5 or 192.168.1.0/24)",
-            value="192.168.1.0/24",
-            help="Enter a single IP (e.g. 192.168.1.5) or a CIDR subnet (e.g. 192.168.1.0/24).",
+            "Target (single IP or CIDR, e.g. 45.33.32.156 or 45.33.32.156/24)",
+            value="45.33.32.156/24",
+            help="Enter a single IP or a CIDR range.",
         )
-    with col2:
-        port_input = st.text_input(
-            "Port, port‐range (e.g. 20-100), or `all`",
-            value="80",
-            help="Enter a single port (e.g. 22), a range (e.g. 20-100), or `all` (scans 0–65535).",
-        )
+        start_ip_input = end_ip_input = None
+
+    port_input = st.text_input(
+        "Port, port‐range (e.g. 20-100), or `all`",
+        value="80",
+        help="Enter a single port (e.g. 22), a range (e.g. 20-100), or `all` (scans 0–65535).",
+    )
 
     threads = st.number_input(
         "Number of threads (1–1000)",
@@ -82,13 +113,64 @@ if run_cli:
     st.markdown("---")
 
     # ──────────────────────────────────────────────────────────────────────────
-    # VALIDATE TARGET (single IP or CIDR)
+    # CLEAR OUT EXISTING CSVs IN results_folder BEFORE STARTING
     # ──────────────────────────────────────────────────────────────────────────
-    try:
-        ipaddress.ip_network(target_input, strict=False)
-    except Exception as e:
-        st.error(f"⚠️ Invalid target '{target_input}': {e}")
-        st.stop()
+    results_folder = PROJECT_ROOT / "Modules" / "scanner" / "results"
+    if results_folder.exists():
+        for file_path in results_folder.glob("*"):
+            try:
+                file_path.unlink()
+            except Exception:
+                pass
+    else:
+        results_folder.mkdir(parents=True, exist_ok=True)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # BUILD targets_to_scan: one element (CIDR/IP) or list of IPs from [start, end]
+    # ──────────────────────────────────────────────────────────────────────────
+    targets_to_scan = []
+
+    if scan_type == "IP Range":
+        start_raw = start_ip_input.strip()
+        end_raw = end_ip_input.strip()
+        # Validate start IP
+        try:
+            start_addr = ipaddress.IPv4Address(start_raw)
+        except Exception:
+            st.error(f"⚠️ Start IP '{start_raw}' is not a valid IPv4 address.")
+            st.stop()
+        # Validate end IP
+        try:
+            end_addr = ipaddress.IPv4Address(end_raw)
+        except Exception:
+            st.error(f"⚠️ End IP '{end_raw}' is not a valid IPv4 address.")
+            st.stop()
+
+        if int(end_addr) < int(start_addr):
+            st.error("⚠️ End IP must be greater than or equal to Start IP.")
+            st.stop()
+
+        # Build list from start → end inclusive
+        for ip_int in range(int(start_addr), int(end_addr) + 1):
+            targets_to_scan.append(str(ipaddress.IPv4Address(ip_int)))
+    else:
+        tgt = target_input.strip()
+        if "/" in tgt:
+            # Validate CIDR
+            try:
+                _ = ipaddress.ip_network(tgt, strict=False)
+                targets_to_scan = [tgt]
+            except Exception as e:
+                st.error(f"⚠️ '{tgt}' is not a valid CIDR: {e}")
+                st.stop()
+        else:
+            # Validate single IP
+            try:
+                _ = ipaddress.ip_address(tgt)
+                targets_to_scan = [tgt]
+            except Exception as e:
+                st.error(f"⚠️ '{tgt}' is not a valid IP address: {e}")
+                st.stop()
 
     # ──────────────────────────────────────────────────────────────────────────
     # DETERMINE PORT ARGUMENT
@@ -97,42 +179,53 @@ if run_cli:
     if pi == "all":
         port_arg = ["-a"]
     else:
-        port_arg = [pi]  # let the CLI handle format validation
+        port_arg = [pi]  # let scanner.py validate format
 
     # ──────────────────────────────────────────────────────────────────────────
-    # BUILD THE SUBPROCESS COMMAND
+    # RUN scanner.py FOR EACH TARGET
     # ──────────────────────────────────────────────────────────────────────────
-    cmd = (
-        [
-            sys.executable,
-            str(SCANNER_PATH),
-            target_input,
-        ]
-        + port_arg
-        + ["-t", str(int(threads))]
-    )
+    any_error = False
+    for tgt in targets_to_scan:
+        cmd = (
+            [
+                sys.executable,
+                str(SCANNER_PATH),
+                tgt,
+            ]
+            + port_arg
+            + ["-t", str(int(threads))]
+        )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # RUN scanner.py AS A SUBPROCESS (no terminal output shown directly)
-    # ──────────────────────────────────────────────────────────────────────────
-    with st.spinner("Running scanner.py... this may take a while"):
-        try:
-            proc = subprocess.run(
-                cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, timeout=3600
-            )
-        except subprocess.TimeoutExpired:
-            st.error("❌ scanner.py timed out after 3600 seconds.")
-            st.stop()
-        except Exception as e:
-            st.error(f"❌ Failed to run scanner.py: {e}")
-            st.stop()
+        with st.spinner(f"Running scanner.py on {tgt}…"):
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    timeout=3600,
+                )
+            except subprocess.TimeoutExpired:
+                st.error(f"❌ scanner.py timed out on {tgt}.")
+                any_error = True
+                continue
+            except Exception as e:
+                st.error(f"❌ Failed to run scanner.py on {tgt}: {e}")
+                any_error = True
+                continue
 
-    if proc.returncode != 0:
-        st.warning(
-            "⚠️ scanner.py finished with errors. You can still view any CSVs that were created."
+        if proc.returncode != 0:
+            st.warning(f"⚠️ scanner.py exited with code {proc.returncode} on {tgt}.")
+            any_error = True
+        else:
+            st.success(f"✅ scanner.py finished without errors on {tgt}.")
+
+    if any_error:
+        st.info(
+            "Some targets returned errors. Check the `<IP>_ports.csv` files below for partial results."
         )
     else:
-        st.success("✅ scanner.py finished without errors.")
+        st.success("All scans completed successfully.")
 
     # ──────────────────────────────────────────────────────────────────────────
     # DISPLAY ONLY THE <IP>_ports.csv FILES
@@ -147,7 +240,7 @@ if run_cli:
         )
         st.stop()
 
-    # Only select files named "*_ports.csv"
+    # Glob only files ending in “_ports.csv”
     csv_paths = sorted(results_folder.glob("*_ports.csv"))
     if not csv_paths:
         st.info("No `<IP>_ports.csv` files found under `Modules/scanner/results/`.")
