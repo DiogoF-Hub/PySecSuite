@@ -8,4 +8,4 @@ rockyou.txt
 *.docx
 *.docm
 
-Modules\scanner\results
+Modules\scanner\results\*
