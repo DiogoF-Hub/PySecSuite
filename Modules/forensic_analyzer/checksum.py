@@ -6,13 +6,13 @@ upload_dir = os.path.join(root_dir, "Uploads")
 
 
 def verify_file_checksum(file_path: str, expected_hash: str, hash_algorithm: str):
-    print(f"\nVerifying checksum with {hash_algorithm.upper()}")
-
+    results = []
     expected_hash = expected_hash.lower().strip()
     hash_algorithm = hash_algorithm.lower().strip()
 
+    results.append(f"**🔒 Verifying checksum with `{hash_algorithm.upper()}`**")
+
     try:
-        # Select the correct hasher
         if hash_algorithm == "md5":
             hasher = hashlib.md5()
         elif hash_algorithm == "sha1":
@@ -22,24 +22,25 @@ def verify_file_checksum(file_path: str, expected_hash: str, hash_algorithm: str
         elif hash_algorithm == "sha512":
             hasher = hashlib.sha512()
         else:
-            print(f"Unsupported hash algorithm: {hash_algorithm}")
-            return
+            return [f"❌ Unsupported hash algorithm: {hash_algorithm}"]
 
-        # Read file and update hash
         with open(file_path, "rb") as f:
-            # := walrus operator is used here for readability because it allows us to read and update the hash in one line
             while chunk := f.read(4096):
                 hasher.update(chunk)
 
         actual_hash = hasher.hexdigest()
 
-        print(f"Expected: {expected_hash}")
-        print(f"Actual  : {actual_hash}")
+        results.append(f"📥 Expected: `{expected_hash}`")
+        results.append(f"📤 Actual  : `{actual_hash}`")
 
         if actual_hash == expected_hash:
-            print("File checksum matches. File is intact.")
+            results.append("✅ File checksum matches. File is intact.")
         else:
-            print("File checksum does NOT match. File may be corrupt or manipulated.")
+            results.append(
+                "❗ File checksum does NOT match. File may be corrupt or manipulated."
+            )
 
     except Exception as e:
-        print(f"Failed to compute hash: {e}")
+        results.append(f"❌ Failed to compute hash: {e}")
+
+    return results

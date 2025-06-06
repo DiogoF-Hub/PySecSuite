@@ -1,8 +1,10 @@
 import re
 import hashlib
 import os
+from datetime import datetime
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+result_dir = os.path.join(root_dir, "password_cracker", "Results")
 assets_dir = os.path.join(root_dir, "Assets")
 wordlist_dir = os.path.join(assets_dir, "wordlists")
 wordlist_file = os.path.join(wordlist_dir, "rockyou.txt")
@@ -67,7 +69,19 @@ def crack_single_hash(hash_line):
         return None
 
 
-def multi_crack_hashes_streamed():
+def multi_crack_hashes_streamed(save_results=False):
+    if save_results:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_filename = f"cracked_hashes_{timestamp}.txt"
+        result_path = os.path.join(result_dir, result_filename)
+
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+
+        print(
+            f"[+] Results will be saved to {os.path.join(result_dir, 'cracked_hashes.txt')}"
+        )
+
     try:
         with open(hashes_file, "r") as hash_file:
             for hash_line in hash_file:
@@ -77,6 +91,9 @@ def multi_crack_hashes_streamed():
                 result = crack_single_hash(hash_line)
                 if result:
                     print(f"[=] {hash_line} => {result}")
+                    if save_results:
+                        with open(result_path, "a") as result_file:
+                            result_file.write(f"{hash_line} => {result}\n")
                 else:
                     print(f"[-] {hash_line} => Not Found")
     except FileNotFoundError:
