@@ -17,24 +17,7 @@ st.set_page_config(page_title="Network Scanner", layout="wide")
 # ──────────────────────────────────────────────────────────────────────────────
 # HEADER
 # ──────────────────────────────────────────────────────────────────────────────
-st.title("🕵️‍♂️ PySecSuit Network Scanner (CLI‐style)")
-st.markdown(
-    """
-This page runs your existing `scanner.py` exactly as if you typed on the command line:
-
-
-
-
-
-But instead of forcing you to type something like `45.33.32.156 - 159`, you can simply check “Use IP Range?” and enter a **Start IP** and **End IP**, and we’ll iterate for you.
-
-
-
-1
-You can choose between scanning a single IP/CIDR or an IP range.  
-After it finishes, only the `<IP>_ports.csv` files will be displayed as tables with Download buttons.
-"""
-)
+st.title("🕵️‍♂️ PySecSuit Network Scanner")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DETERMINE PROJECT ROOT AND SCANNER.PY PATH
