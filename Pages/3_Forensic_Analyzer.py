@@ -18,7 +18,21 @@ with tabs[0]:
 
     uploaded_file = st.file_uploader(
         "Upload a file (PDF, DOCX, JPG, etc.)",
-        type=["pdf", "docx", "docm", "jpg", "jpeg", "png"],
+        type=[
+            "pdf",
+            "docx",
+            "docm",
+            "jpg",
+            "jpeg",
+            "png",
+            "mp4",
+            ".mkv",
+            ".m4a",
+            ".mp3",
+            ".wav",
+            ".flac",
+            ".aac",
+        ],
         key="analyzer",
     )
 

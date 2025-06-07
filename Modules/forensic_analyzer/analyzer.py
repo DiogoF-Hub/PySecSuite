@@ -242,6 +242,119 @@ def analyze_docx_metadata(file_path: str, file_name: str):
     return results
 
 
+def format_duration(seconds_str):
+    try:
+        # Convert the input string to a float
+        total_seconds = float(seconds_str)
+
+        # Handle very short durations
+        # .2f is used to format seconds with two decimal places
+        if total_seconds < 1:
+            return f"{total_seconds:.2f} seconds"
+
+        # Convert to hours, minutes, and seconds
+        # divmod is used to get the quotient (result) and remainder
+        minutes, seconds = divmod(int(total_seconds), 60)
+        hours, minutes = divmod(minutes, 60)
+
+        # Build the readable string
+        if hours > 0:
+            return f"{hours}h {minutes}m {seconds}s"
+        else:
+            return f"{minutes}m {seconds}s"
+
+    except Exception:
+        # If input couldn't be parsed
+        return f"{seconds_str} (unreadable)"
+
+
+# MP4, MP3, WAV, MKV, M4A
+def analyze_media_metadata(file_path: str, file_name: str):
+    kind = filetype.guess(file_path)
+    media_label = kind.mime if kind else "Unknown Media"
+    results = [f"**📁 Analyzing {media_label}:** {file_name}"]
+
+    try:
+        with ExifTool() as et:
+            metadata_list = et.execute_json("-j", file_path)
+            metadata = metadata_list[0] if metadata_list else {}
+
+            creation_raw = (
+                metadata.get("QuickTime:CreateDate")
+                or metadata.get("Track:CreateDate")
+                or metadata.get("EXIF:CreateDate")
+                or metadata.get("ID3:Date")
+                or metadata.get("File:FileCreateDate")
+            )
+
+            modify_raw = (
+                metadata.get("QuickTime:ModifyDate")
+                or metadata.get("Track:ModifyDate")
+                or metadata.get("File:FileModifyDate")
+            )
+
+            results.append(f"🕒 Creation Date : {creation_raw}")
+            results.append(f"🕓 Modify Date   : {modify_raw}")
+
+            now = datetime.now()
+
+            if creation_raw and modify_raw:
+                creation_clean = creation_raw.split("+")[0].strip()
+                modify_clean = modify_raw.split("+")[0].strip()
+                creation_dt = datetime.strptime(creation_clean, "%Y:%m:%d %H:%M:%S")
+                modify_dt = datetime.strptime(modify_clean, "%Y:%m:%d %H:%M:%S")
+                time_difference = (modify_dt - creation_dt).total_seconds()
+                results.extend(compare_time_difference(time_difference))
+
+                if creation_dt > now:
+                    results.append("⚠️ Suspicious: Creation time is in the future.")
+                if modify_dt > now:
+                    results.append("⚠️ Suspicious: Modification time is in the future.")
+            else:
+                results.append(
+                    "⚠️ Not enough timestamp information to perform consistency check."
+                )
+
+            # Duration in human-readable format
+            duration_sec = metadata.get("Track:Duration") or metadata.get(
+                "QuickTime:Duration"
+            )
+            if duration_sec:
+                readable = format_duration(duration_sec)
+                results.append(f"⏳ Duration: {readable}")
+                try:
+                    if float(duration_sec) < 1.0:
+                        results.append(
+                            "⚠️ Very short duration — possibly incomplete or suspicious."
+                        )
+                except:
+                    pass
+
+            # Add media metadata if present
+            for tag in [
+                "Format",
+                "Duration",
+                "AudioCodec",
+                "VideoCodec",
+                "Title",
+                "Artist",
+                "Album",
+            ]:
+                for key in metadata:
+                    if key.lower().endswith(tag.lower()):
+                        if tag == "Duration":
+                            results.append(
+                                f"⏳ {tag}: {format_duration(metadata[key])}"
+                            )
+                            continue
+                        results.append(f"🎧 {tag}: {metadata[key]}")
+                        break
+
+    except Exception as e:
+        results.append(f"❌ Failed to analyze {media_label} metadata: {e}")
+    return results
+
+
 def analyze_file(file_name: str):
     file_path = os.path.join(upload_dir, file_name)
 
@@ -262,5 +375,7 @@ def analyze_file(file_name: str):
         return analyze_pdf_metadata(file_path, file_name)
     elif file_ext in [".docx", ".docm"]:
         return analyze_docx_metadata(file_path, file_name)
+    elif file_ext in [".mp4", ".mkv", ".m4a", ".mp3", ".wav", ".flac", ".aac"]:
+        return analyze_media_metadata(file_path, file_name)
     else:
         return [f"❌ Unsupported file type: {file_ext}"]

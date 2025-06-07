@@ -8,5 +8,5 @@ rockyou.txt
 *.docx
 *.docm
 
-Modules\scanner\results\*
-Uploads\*
+Modules/scanner/results/*
+Uploads/
