@@ -36,3 +36,16 @@ def reverse_image_search(image_path):
 # image_path = input("Enter the full path to the image you want to search: ").strip()
 image_path = os.path.join(upload_dir, "ss.jpg")  # Replace with your image path
 reverse_image_search(image_path)
+if __name__ == "__main__":
+    import argparse, json, sys
+
+    p = argparse.ArgumentParser(description="OSINT image analysis (JSON)")
+    p.add_argument("--image", required=True, help="Path to image file")
+    args = p.parse_args()
+
+    try:
+        out = get_image_data(args.image)
+        print(json.dumps(out))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)

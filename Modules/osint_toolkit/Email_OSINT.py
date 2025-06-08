@@ -60,14 +60,6 @@ def check_social_media(email):
         print(f"\n❌ No social media links found for {email}.")
 
 
-# Main function to get user input and run checks
-if __name__ == "__main__":
-    email = input(
-        "📧 Enter an email to check for breaches and social media links: "
-    ).strip()
-
-    # Check email breaches using LeakCheck public API
-    check_email_breach(email)
-
-    # Check if the email is linked to any social media accounts
-    check_social_media(email)
+def get_email_data(email: str) -> dict:
+      …
+      return data

@@ -1,6 +1,3 @@
-# Modules/osint_toolkit/PhoneNumbers_OSINT.py
-
-import sys
 from phonenumbers import (
     parse,
     NumberParseException,
@@ -13,42 +10,48 @@ from phonenumbers import (
     PhoneNumberType,
     region_code_for_number,
 )
+import json
+import sys
 
-
-def lookup_phone(raw):
+def get_phone_data(raw: str) -> dict:
+    """Returns parsed phone number metadata."""
     try:
         num = parse(raw, None)
     except NumberParseException as e:
-        print(f"❌ Error parsing number: {e}", file=sys.stderr)
-        sys.exit(1)
+        return {"error": str(e)}
 
     info = {
         "E.164": format_number(num, PhoneNumberFormat.E164),
         "International": format_number(num, PhoneNumberFormat.INTERNATIONAL),
         "Region": f"{region_code_for_number(num)} ({geocoder.description_for_number(num, 'en')})",
-        "Carrier": carrier.name_for_number(num, "en") or "Unknown",
-        "Timezones": ", ".join(timezone.time_zones_for_number(num)) or "Unknown",
+        "Carrier": carrier.name_for_number(num, "en") or None,
+        "Timezones": timezone.time_zones_for_number(num),
     }
-
-    # Line type
     try:
-        lt = number_type(num)
-        info["Line type"] = PhoneNumberType(lt).name
+        info["Line type"] = PhoneNumberType(number_type(num)).name
     except Exception:
-        info["Line type"] = "Unknown"
+        info["Line type"] = None
 
     return info
 
-
-def main():
-    raw = input("Enter phone number: ").strip()
-    info = lookup_phone(raw)
-
-    # Print metadata
-    print("\n📊 Phone Metadata:")
-    for label, val in info.items():
-        print(f"  • {label:13}: {val}")
-
-
+# ==================== CLI JSON‐wrapper ====================
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="OSINT: Phone number lookup (JSON output)"
+    )
+    parser.add_argument(
+        "--phone",
+        required=True,
+        help="Phone number to investigate (in international format or with country code)",
+    )
+    args = parser.parse_args()
+
+    try:
+        result = get_phone_data(args.phone)
+        print(json.dumps(result))
+    except Exception as e:
+        # Print error as JSON on stderr
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)

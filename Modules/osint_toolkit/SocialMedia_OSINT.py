@@ -150,9 +150,15 @@ async def main(username):
 
 
 if __name__ == "__main__":
-    if sys.version_info < (3, 7):
-        sys.exit("Requires Python 3.7+")
-    username = input("Enter a username: ").strip()
-    if not username:
-        sys.exit("No username provided; exiting.")
-    asyncio.run(main(username))
+    import argparse, json, sys
+
+    p = argparse.ArgumentParser(description="OSINT social‐media username lookup (JSON)")
+    p.add_argument("--username", required=True, help="Username to investigate")
+    args = p.parse_args()
+
+    try:
+        out = get_social_data(args.username)
+        print(json.dumps(out))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)

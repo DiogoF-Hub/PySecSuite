@@ -176,7 +176,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse, json, sys
 
-# Dependencies:
-# pip install requests python-whois dnspython ipwhois
+    p = argparse.ArgumentParser(description="OSINT IP/domain lookup (JSON)")
+    p.add_argument("--ip", required=True, help="IP address or domain to investigate")
+    args = p.parse_args()
+
+    try:
+        out = get_ip_data(args.ip)
+        print(json.dumps(out))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)
