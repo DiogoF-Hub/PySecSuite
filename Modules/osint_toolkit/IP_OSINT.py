@@ -1,138 +1,27 @@
 #!/usr/bin/env python3
 """
 OSINT Script to gather IP and domain information: geolocation, WHOIS, reverse DNS lookup, DNS records.
-Interactive prompt asking for target input.
+Now refactored to expose a get_ip_data() function and emit JSON on the CLI.
 """
 
 import requests
 import socket
 import sys
 import ipaddress
+import whois
+import dns.resolver
+import json
 
-try:
-    import dns.resolver
-except ImportError:
-    dns = None
+from ipwhois import IPWhois
 
-# Domain WHOIS
-try:
-    import whois as whois_lib
-except ImportError:
-    whois_lib = None
-
-# IP WHOIS
-try:
-    from ipwhois import IPWhois
-except ImportError:
-    IPWhois = None
-
-
-def get_geolocation(ip):
+# ==================== Core lookup ====================
+def get_ip_data(target: str) -> dict:
     """
-    Fetch geolocation data for the given IP using ip-api.com (supports IPv4 & IPv6).
+    Returns geolocation, reverse DNS, IP WHOIS or domain WHOIS + DNS records.
     """
-    url = f"http://ip-api.com/json/{ip}"
-    try:
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
-        if data.get("status") == "success":
-            return {
-                "Country": data.get("country"),
-                "Region": data.get("regionName"),
-                "City": data.get("city"),
-                "ISP": data.get("isp"),
-                "Organization": data.get("org"),
-                "AS": data.get("as"),
-                "Latitude": data.get("lat"),
-                "Longitude": data.get("lon"),
-            }
-        return {"Error": data.get("message", "Unknown error")}
-    except Exception as e:
-        return {"Error": str(e)}
+    out = {}
 
-
-def get_reverse_dns(ip):
-    """
-    Perform a reverse DNS lookup to find the hostname associated with the IP.
-    """
-    try:
-        hostname, _, _ = socket.gethostbyaddr(ip)
-        return hostname
-    except Exception as e:
-        return f"Error: {e}"
-
-
-def get_ip_whois(ip):
-    """
-    Retrieve WHOIS (RDAP) information for the IP address.
-    """
-    try:
-        obj = IPWhois(ip)
-        result = obj.lookup_rdap(depth=1)
-        network = result.get("network", {})
-        return {
-            "ASN": result.get("asn"),
-            "ASN CIDR": result.get("asn_cidr"),
-            "ASN Country Code": result.get("asn_country_code"),
-            "ASN Registry": result.get("asn_registry"),
-            "Network Name": network.get("name"),
-            "Network Start": network.get("start_address"),
-            "Network End": network.get("end_address"),
-            "Network CIDR": network.get("cidr"),
-        }
-    except Exception as e:
-        return {"Error": str(e)}
-
-
-def get_domain_whois(domain):
-    """
-    Retrieve WHOIS information for a domain.
-    """
-    try:
-        w = whois_lib.whois(domain)
-        return w.text if hasattr(w, "text") else dict(w)
-    except Exception as e:
-        return {"Error": str(e)}
-
-
-def get_dns_records(domain):
-    """
-    Lookup common DNS records (A, AAAA, MX, NS) for a domain.
-    """
-    records = {}
-    if dns is None:
-        records["Error"] = "dnspython not installed; install via pip install dnspython"
-        return records
-    for rtype in ["A", "AAAA", "MX", "NS"]:
-        try:
-            answers = dns.resolver.resolve(domain, rtype)
-            records[rtype] = [rdata.to_text() for rdata in answers]
-        except Exception:
-            records[rtype] = []
-    return records
-
-
-def print_section(title, content):
-    """
-    Nicely format and print a section title and its content.
-    """
-    print(f"\n=== {title} ===")
-    if isinstance(content, dict):
-        for k, v in content.items():
-            print(f"{k}: {v}")
-    else:
-        print(content)
-
-
-def main():
-    # Prompt the user for the target
-    target = input("Enter IP address (IPv4/IPv6) or domain to investigate: ").strip()
-    if not target:
-        print("[!] No target provided. Exiting.")
-        sys.exit(1)
-    print(f"[+] Gathering information for: {target}")
-
-    # Determine if target is IP (v4 or v6) or domain
+    # Determine if input is an IP or a domain
     try:
         ipaddress.ip_address(target)
         is_ip = True
@@ -140,51 +29,70 @@ def main():
         is_ip = False
 
     if is_ip:
-        # Geolocation
-        geo = get_geolocation(target)
-        print_section("Geolocation", geo)
+        # — Geolocation —
+        geo = requests.get(f"http://ip-api.com/json/{target}", timeout=10).json()
+        out["geolocation"] = {
+            "country": geo.get("country"),
+            "city": geo.get("city"),
+            "isp": geo.get("isp"),
+            "timezone": geo.get("timezone"),
+        }
 
-        # Reverse DNS
-        rdns = get_reverse_dns(target)
-        print_section("Reverse DNS", rdns)
+        # — Reverse DNS —
+        try:
+            out["reverse_dns"] = socket.gethostbyaddr(target)[0]
+        except Exception:
+            out["reverse_dns"] = None
 
-        # IP WHOIS
-        if IPWhois is None:
-            print_section(
-                "IP WHOIS",
-                {"Error": "ipwhois not installed; install via pip install ipwhois"},
-            )
-        else:
-            whois_info = get_ip_whois(target)
-            print_section("IP WHOIS", whois_info)
+        # — IP WHOIS (RDAP) —
+        try:
+            rdap = IPWhois(target).lookup_rdap(depth=1)
+            out["ip_whois"] = rdap.get("network", {})
+        except Exception:
+            out["ip_whois_error"] = "Failed to fetch RDAP"
+
     else:
-        # Domain WHOIS
-        if whois_lib is None:
-            print_section(
-                "Domain WHOIS",
-                {
-                    "Error": "python-whois not installed; install via pip install python-whois"
-                },
-            )
-        else:
-            whois_info = get_domain_whois(target)
-            print_section("Domain WHOIS", whois_info)
+        # — Domain WHOIS via python-whois —
+        w = whois.whois(target)
+        out["domain_whois"] = {
+            "registrar": w.registrar,
+            "creation_date": w.creation_date,
+            "expiration_date": w.expiration_date,
+            "nameservers": w.name_servers,
+        }
 
-        # DNS Records
-        dns_recs = get_dns_records(target)
-        print_section("DNS Records", dns_recs)
+        # — DNS Records —
+        recs = {}
+        for rtype in ("A", "AAAA", "MX", "NS"):
+            try:
+                answers = dns.resolver.resolve(target, rtype)
+                recs[rtype] = [r.to_text() for r in answers]
+            except Exception:
+                recs[rtype] = []
+        out["dns_records"] = recs
+
+    return out
 
 
+# ==================== CLI JSON‐wrapper ====================
 if __name__ == "__main__":
-    import argparse, json, sys
+    import argparse
 
-    p = argparse.ArgumentParser(description="OSINT IP/domain lookup (JSON)")
-    p.add_argument("--ip", required=True, help="IP address or domain to investigate")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(
+        description="OSINT: IP/domain lookup (JSON output)"
+    )
+    parser.add_argument(
+        "--ip",
+        required=True,
+        help="IP address or domain to investigate"
+    )
+    args = parser.parse_args()
 
     try:
-        out = get_ip_data(args.ip)
-        print(json.dumps(out))
+        result = get_ip_data(args.ip)
+        # Emit structured JSON
+        print(json.dumps(result))
     except Exception as e:
+        # On error, emit a JSON object with an 'error' key on stderr
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         sys.exit(1)

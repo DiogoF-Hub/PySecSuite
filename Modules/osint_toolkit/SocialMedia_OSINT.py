@@ -1,164 +1,62 @@
-#!/usr/bin/env python3
 import asyncio
 import aiohttp
+import json
 import sys
-import re
 
-# Configuration for selected platforms, inspired by Sherlock's data.json
-SITE_CONFIG = {
-    "Instagram": {
-        "url": "https://www.instagram.com/{}/",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"Sorry,\s*this\s*page\s*isn'?t\s*available"],
-    },
-    "Facebook": {
-        "url": "https://www.facebook.com/{}",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"Content\s*isn'?t\s*available"],
-    },
-    "TikTok": {
-        "url": "https://www.tiktok.com/@{}",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"Page\s*Not\s*Found", r"Video\s*doesn't\s*exist"],
-    },
-    "LinkedIn": {
-        "url": "https://www.linkedin.com/mwlite/in/{}",
-        "method": "GET",
-        "errorType": "status_code",
-        "errorCode": [404],
-        "loginMsg": [r"log in", r"sign in"],  # detect login gate
-    },
-    "YouTube": {
-        "url": "https://www.youtube.com/user/{}",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"404\s*Not\s*Found", r"Something\s*went\s*wrong"],
-    },
-    "X": {
-        "url": "https://x.com/{}",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"This\s*account\s*doesn'?t\s*exist"],
-    },
-    "Reddit": {
-        "url": "https://www.reddit.com/user/{}",
-        "method": "GET",
-        "errorType": "message",
-        "errorMsg": [r"nobody\s*on\s*Reddit\s*goes\s*by\s*that\s*name"],
-    },
-}
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/112.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-
-async def fetch(session, platform, handle):
+# ==================== Core Logic ====================
+def get_social_data(username: str) -> dict:
     """
-    Checks a single profile URL using the rules from SITE_CONFIG.
-    Returns (platform, status, url).
-    Status codes: 'found', 'requires_login', 'not_found', 'error'.
+    Checks common social platforms for existence of a given username.
+    Returns a dict of {platform: status}.
     """
-    cfg = SITE_CONFIG[platform]
-    url = cfg["url"].format(handle)
-    try:
-        # perform the request (GET)
-        method = cfg.get("method", "GET").lower()
-        resp = await getattr(session, method)(url, headers=HEADERS, timeout=10)
-        text = await resp.text()
-        code = resp.status
-    except Exception as e:
-        return platform, "error", f"{url} ({e})"
+    SITE_CONFIG = {
+        "twitter":   {"url": "https://twitter.com/{}"},
+        "instagram": {"url": "https://www.instagram.com/{}"},
+        "facebook":  {"url": "https://www.facebook.com/{}"},
+        "linkedin":  {"url": "https://www.linkedin.com/in/{}"},
+        "github":    {"url": "https://github.com/{}"},
+        # Add more as needed...
+    }
+    HEADERS = {"User-Agent": "Mozilla/5.0", "Accept-Language": "en-US"}
 
-    status = None
-    # status_code based not_found
-    if cfg.get("errorType") == "status_code":
-        if code in cfg.get("errorCode", []):
-            status = "not_found"
-    # message based not_found
-    elif cfg.get("errorType") == "message":
-        if code == 404:
-            status = "not_found"
-        else:
-            for pat in cfg.get("errorMsg", []):
-                if re.search(pat, text, re.IGNORECASE):
-                    status = "not_found"
-                    break
-    # LinkedIn login gate detection
-    if platform == "LinkedIn" and code == 200 and not status:
-        for pat in cfg.get("loginMsg", []):
-            if re.search(pat, text, re.IGNORECASE):
-                status = "requires_login"
-                break
-
-    # default statuses
-    if not status:
-        if code == 200:
-            status = "found"
-        else:
+    async def fetch(session, platform, template):
+        url = template.format(username)
+        try:
+            resp = await session.get(url, headers=HEADERS, timeout=10)
+            status = "found" if resp.status == 200 else "not_found"
+        except Exception:
             status = "error"
+        return platform, status
 
-    return platform, status, url
+    async def runner():
+        async with aiohttp.ClientSession() as session:
+            tasks = [
+                fetch(session, platform, cfg["url"])
+                for platform, cfg in SITE_CONFIG.items()
+            ]
+            return await asyncio.gather(*tasks)
 
+    results = asyncio.run(runner())
+    return {plat: stat for plat, stat in results}
 
-async def main(username):
-    # sanitize input: remove spaces, lowercase only for LinkedIn
-    base = username.replace(" ", "")
-    print(f"\n🔍 Searching for variants of '{username}'...\n")
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for platform in SITE_CONFIG:
-            handle = base.lower() if platform == "LinkedIn" else base
-            tasks.append(fetch(session, platform, handle))
-        results = await asyncio.gather(*tasks)
-
-    # categorize results
-    found = [url for plat, st, url in results if st == "found"]
-    gated = [url for plat, st, url in results if st == "requires_login"]
-    missing = [plat for plat, st, url in results if st == "not_found"]
-    errors = [(plat, info) for plat, st, info in results if st == "error"]
-
-    # print summary
-    if found:
-        print("✅ Public profiles:")
-        for url in found:
-            print("  ", url)
-    if gated:
-        print("\n🔒 Login-gated (requires account):")
-        for url in gated:
-            print("  ", url)
-    if missing:
-        print("\n❌ Not found:")
-        for plat in missing:
-            print("  ", plat)
-    if errors:
-        print("\n⚠️ Errors:")
-        for plat, info in errors:
-            print(f"  {plat}: {info}")
-
-    print(
-        "\nℹ️ Note: 'login-gated' profiles may still be real, and some results could be false positives."
-    )
-
-
+# ==================== CLI JSON-wrapper ====================
 if __name__ == "__main__":
-    import argparse, json, sys
+    import argparse
 
-    p = argparse.ArgumentParser(description="OSINT social‐media username lookup (JSON)")
-    p.add_argument("--username", required=True, help="Username to investigate")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(
+        description="OSINT: Social-media username lookup (JSON output)"
+    )
+    parser.add_argument(
+        "--username",
+        required=True,
+        help="Username to investigate (without @)",
+    )
+    args = parser.parse_args()
 
     try:
-        out = get_social_data(args.username)
-        print(json.dumps(out))
+        result = get_social_data(args.username)
+        print(json.dumps(result))
     except Exception as e:
+        # Print error to stderr as JSON
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         sys.exit(1)
