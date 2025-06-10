@@ -13,8 +13,12 @@ from phonenumbers import (
 import json
 import sys
 
+
 def get_phone_data(raw: str) -> dict:
-    """Returns parsed phone number metadata."""
+    """
+    Returns parsed phone number metadata.
+
+    """
     try:
         num = parse(raw, None)
     except NumberParseException as e:
@@ -34,6 +38,7 @@ def get_phone_data(raw: str) -> dict:
 
     return info
 
+
 # ==================== CLI JSON‐wrapper ====================
 if __name__ == "__main__":
     import argparse
@@ -52,6 +57,8 @@ if __name__ == "__main__":
         result = get_phone_data(args.phone)
         print(json.dumps(result))
     except Exception as e:
+        # ───────────────────────────────────────────────────────────
         # Print error as JSON on stderr
+        # ───────────────────────────────────────────────────────────
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         sys.exit(1)

@@ -3,19 +3,21 @@ import aiohttp
 import json
 import sys
 
+
 # ==================== Core Logic ====================
 def get_social_data(username: str) -> dict:
     """
     Checks common social platforms for existence of a given username.
     Returns a dict of {platform: status}.
+
     """
     SITE_CONFIG = {
-        "twitter":   {"url": "https://twitter.com/{}"},
+        "twitter": {"url": "https://twitter.com/{}"},
         "instagram": {"url": "https://www.instagram.com/{}"},
-        "facebook":  {"url": "https://www.facebook.com/{}"},
-        "linkedin":  {"url": "https://www.linkedin.com/in/{}"},
-        "github":    {"url": "https://github.com/{}"},
-        # Add more as needed...
+        "facebook": {"url": "https://www.facebook.com/{}"},
+        "linkedin": {"url": "https://www.linkedin.com/in/{}"},
+        "github": {"url": "https://github.com/{}"},
+        # Add more if needed but carefull how each web handles the usernames
     }
     HEADERS = {"User-Agent": "Mozilla/5.0", "Accept-Language": "en-US"}
 
@@ -38,6 +40,7 @@ def get_social_data(username: str) -> dict:
 
     results = asyncio.run(runner())
     return {plat: stat for plat, stat in results}
+
 
 # ==================== CLI JSON-wrapper ====================
 if __name__ == "__main__":

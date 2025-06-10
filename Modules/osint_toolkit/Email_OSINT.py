@@ -11,7 +11,9 @@ def get_email_data(email: str) -> dict:
     """
     data = {"breaches": [], "social_links": []}
 
+    # ───────────────────────────────────────────────────────────
     # Breach lookup
+    # ───────────────────────────────────────────────────────────
     try:
         api = LeakCheckAPI_Public()
         results = api.lookup(query=email)
@@ -20,15 +22,19 @@ def get_email_data(email: str) -> dict:
         if isinstance(results, list):
             for breach in results:
                 if isinstance(breach, dict):
-                    data["breaches"].append({
-                        "site": breach.get("site"),
-                        "date": breach.get("date", "Unknown"),
-                        "data": breach.get("data", "Unknown"),
-                    })
+                    data["breaches"].append(
+                        {
+                            "site": breach.get("site"),
+                            "date": breach.get("date", "Unknown"),
+                            "data": breach.get("data", "Unknown"),
+                        }
+                    )
     except Exception as e:
         data["error"] = f"Failed to fetch breach data: {e}"
 
+    # ───────────────────────────────────────────────────────────
     # Social media linkage
+    # ───────────────────────────────────────────────────────────
     platforms = [
         "https://www.instagram.com/",
         "https://twitter.com/",
@@ -48,17 +54,12 @@ def get_email_data(email: str) -> dict:
     return data
 
 
-
 # ==================== CLI JSON-wrapper ====================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="OSINT: Email breach and social-link lookup (JSON output)"
     )
-    parser.add_argument(
-        "--email",
-        required=True,
-        help="Email address to investigate"
-    )
+    parser.add_argument("--email", required=True, help="Email address to investigate")
     args = parser.parse_args()
     try:
         result = get_email_data(args.email)

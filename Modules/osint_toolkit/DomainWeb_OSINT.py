@@ -7,13 +7,24 @@ import sys
 from datetime import datetime
 from bs4 import BeautifulSoup
 
+
 # ==================== Domain Validation ====================
 def is_valid_domain(domain: str) -> bool:
+    """
+    Validates if the input string is a syntactically valid domain name.
+    """
+
     pattern = r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.(?:[A-Za-z]{2,})$"
     return bool(re.match(pattern, domain))
 
+
 # ==================== Format Dates ====================
 def format_date(date):
+    """
+    Converts a datetime or list of datetime objects into a standardized string format.
+    Returns 'Not available' if the input is neither.
+    """
+
     if isinstance(date, list):
         d = date[0]
         if isinstance(d, datetime):
@@ -23,8 +34,14 @@ def format_date(date):
         return date.strftime("%Y-%m-%d")
     return "Not available"
 
+
 # ==================== Core Lookup ====================
 def get_domain_data(domain_name: str) -> dict:
+    """
+    Retrieves WHOIS info, IP geolocation, and website metadata for a given domain.
+    Returns the collected data as a dictionary.
+    """
+
     data = {}
     # WHOIS
     w = whois.whois(domain_name)
@@ -32,7 +49,7 @@ def get_domain_data(domain_name: str) -> dict:
         "creation_date": format_date(w.get("creation_date")),
         "expiration_date": format_date(w.get("expiration_date")),
         "registrar": w.get("registrar") or "Not available",
-        "nameservers": w.get("name_servers") or []
+        "nameservers": w.get("name_servers") or [],
     }
     # IP & Geo
     ip_addr = socket.gethostbyname(domain_name)
@@ -42,7 +59,7 @@ def get_domain_data(domain_name: str) -> dict:
         "country": geo.get("country", "N/A"),
         "city": geo.get("city", "N/A"),
         "isp": geo.get("isp", "N/A"),
-        "timezone": geo.get("timezone", "N/A")
+        "timezone": geo.get("timezone", "N/A"),
     }
     # Website Metadata
     resp = requests.get(f"http://{domain_name}", timeout=5)
@@ -50,11 +67,9 @@ def get_domain_data(domain_name: str) -> dict:
     title = soup.title.string.strip() if soup.title else "N/A"
     desc_tag = soup.find("meta", attrs={"name": "description"})
     description = desc_tag["content"].strip() if desc_tag else "N/A"
-    data["metadata"] = {
-        "title": title,
-        "description": description
-    }
+    data["metadata"] = {"title": title, "description": description}
     return data
+
 
 # ==================== CLI JSON‐wrapper ====================
 if __name__ == "__main__":
@@ -64,9 +79,7 @@ if __name__ == "__main__":
         description="OSINT: Domain WHOIS, IP & metadata lookup (JSON output)"
     )
     parser.add_argument(
-        "--domain",
-        required=True,
-        help="Domain to investigate (e.g., example.com)"
+        "--domain", required=True, help="Domain to investigate (e.g., example.com)"
     )
     args = parser.parse_args()
 

@@ -26,8 +26,9 @@ BANNER = r"""
 
 def ping_host_with_ttl(ip):
     """
-
-    Ping a single IP once and capture its TTL. Returns (ip, ttl) if alive, else None.
+    Ping a host and attempt to extract its TTL value.
+    Returns a tuple (ip, ttl) if the host responds, else None.
+    Helps in basic OS fingerprinting based on TTL.
 
     """
 
@@ -80,8 +81,8 @@ def ping_host_with_ttl(ip):
 
 def guess_os_from_ttl(ttl):
     """
-
-    Given a TTL value, guess the OS family.
+    Infers the operating system based on the TTL value.
+    Typical defaults: Windows=128, Linux=64, Cisco=255.
 
     """
 
@@ -106,10 +107,9 @@ def guess_os_from_ttl(ttl):
 
 def discover_hosts(target, max_threads=100):
     """
-
-    If target contains '/', treat as CIDR  pingsweep. Otherwise return [target].
-
-    Returns list of (ip, ttl, os_guess).
+    Performs host discovery.
+    Accepts single IP or CIDR subnet. Uses threading to speed up discovery.
+    Returns list of (ip, ttl, guessed_os).
 
     """
 
@@ -160,8 +160,8 @@ def discover_hosts(target, max_threads=100):
 
 def parse_port_range(port_range):
     """
-
-    Given "80" or "20-100", return a list of port integers (065535).
+    Parses a single port or range string (e.g., "22" or "20-80").
+    Returns list of integers.
 
     """
 
@@ -218,8 +218,8 @@ def scan_port(ip, port, timeout=1.0):
 
 def grab_banner(ip, port, timeout=2.0):
     """
-
-    If (ip, port) is open, connect & recv up to 1024 bytes. Return decoded string or "".
+    Retrieves the banner from an open TCP port (if available).
+    Returns decoded string.
 
     """
 
@@ -242,10 +242,8 @@ def grab_banner(ip, port, timeout=2.0):
 
 def parse_service_version(banner):
     """
-
-    Extract (product, version) from a banner string, e.g. "OpenSSH_8.4p1" or "Apache/2.4.41".
-
-    Returns (product, version) or (None, None).
+    Attempts to extract (product, version) from a banner string.
+    Supports formats like 'OpenSSH_8.4p1' or 'Apache/2.4.41'.
 
     """
 
@@ -260,10 +258,8 @@ def parse_service_version(banner):
 
 def lookup_cves_circl(product, version):
     """
-
-    Query CIRCL CVE API for any CVEs matching the product; filter by version.
-
-    Returns a list of (cve_id, summary).
+    Queries CIRCL CVE database to find vulnerabilities for the given product/version.
+    Returns list of (cve_id, summary).
 
     """
 
@@ -305,8 +301,8 @@ def lookup_cves_circl(product, version):
 def export_to_csv(results, host_ip, host_ttl, host_os, filename):
     """
     Append only open-port results to CSV. If new, write header first.
-
     Each row: IP, TTL, OS_Guess, Port, Status, Banner, Product, Version, CVEs
+
     """
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     file_exists = os.path.isfile(filename)
