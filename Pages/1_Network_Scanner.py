@@ -20,26 +20,6 @@ st.set_page_config(page_title="Network Scanner", layout="wide")
 st.title("🕵️‍♂️ PySecSuit Network Scanner")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# DETERMINE PROJECT ROOT AND SCANNER.PY PATH
-# ──────────────────────────────────────────────────────────────────────────────
-PAGE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = PAGE_DIR.parent  # assumes Pages/ is directly under project root
-SCANNER_PATH = PROJECT_ROOT / "Modules" / "scanner" / "scanner.py"
-
-if not SCANNER_PATH.is_file():
-    st.error(
-        f"❌ Could not find `scanner.py` at:\n\n  {SCANNER_PATH}\n\n"
-        "Please confirm your folder structure:\n\n"
-        "project_root/\n"
-        "├─ Pages/\n"
-        "│  └─ network_scanner_page.py  ← this file\n"
-        "└─ Modules/\n"
-        "   └─ scanner/\n"
-        "      └─ scanner.py\n"
-    )
-    st.stop()
-
-# ──────────────────────────────────────────────────────────────────────────────
 # CHOOSE SCAN MODE (outside the form so dynamic fields show immediately)
 # ──────────────────────────────────────────────────────────────────────────────
 scan_type = st.radio(

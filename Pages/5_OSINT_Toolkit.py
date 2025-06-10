@@ -4,12 +4,32 @@ import subprocess, tempfile, os, sys, json
 st.set_page_config(layout="wide")
 
 # ───────────────────────────────────────────────────────────
-# Main title styled larger and colored yellow
+# Main title styled larger and markdown for info
 # ───────────────────────────────────────────────────────────
 st.markdown(
     "<h1 style='color:#FFFFFF; font-size:48px; margin-bottom:10px;'>OSINT Toolkit — Friendly UI</h1>",
     unsafe_allow_html=True,
 )
+
+with st.expander("ℹ️ About this Toolkit", expanded=False):
+    st.markdown(
+        """
+        <p style='font-size:16px; color:#DDDDDD;'>
+        Welcome to the OSINT Toolkit!  This interface lets you drop in a domain, email,
+        IP, phone number or username—and get back:
+        </p>
+        <ul style='font-size:14px; color:#CCCCCC;'>
+          <li>WHOIS & DNS for domains</li>
+          <li>Geolocation, ISP & timezone for IPs</li>
+          <li>Breaches & social footprints for emails</li>
+          <li>Carrier, region & line‐type for phones</li>
+          <li>Profile status on major platforms for usernames</li>
+          <li>Image analysis & reverse image search</li>
+        </ul>
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # ───────────────────────────────────────────────────────────
