@@ -9,4 +9,6 @@ rockyou.txt
 *.docm
 
 Modules/scanner/results/*
+Modules/password_cracker/Results/*
 Uploads/
+Assets/wordlists/*
