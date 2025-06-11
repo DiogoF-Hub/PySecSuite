@@ -325,7 +325,7 @@ def analyze_media_metadata(file_path: str, file_name: str):
             if duration_sec:
                 duration_showed = True
                 readable = format_duration(duration_sec)
-                results.append(f"⏳ Duration:: {readable}")
+                results.append(f"⏳ Duration: {readable}")
                 try:
                     if float(duration_sec) < 1.0:
                         results.append(
