@@ -359,7 +359,9 @@ def analyze_file(file_name: str):
     file_path = os.path.join(upload_dir, file_name)
 
     if not check_exiftool_installed():
-        return ["❌ ExifTool is not installed."]
+        return [
+            "❌ ExifTool is not installed. Check the github repository for installation instructions."
+        ]
 
     if not os.path.isfile(file_path):
         return [f"❌ File not found: {file_path}"]
