@@ -19,6 +19,8 @@ def check_exiftool_installed():
 def validate_file_extension(file_path: str):
     kind = filetype.guess(file_path)
     declared_ext = os.path.splitext(file_path)[1].lower()
+    if declared_ext == ".docm":
+        return True  # DOCM files are allowed to have macros, so we analyze them anyway
     if not kind:
         return True  # Proceed with analysis anyway
     actual_ext = f".{kind.extension}"
@@ -316,12 +318,14 @@ def analyze_media_metadata(file_path: str, file_name: str):
                 )
 
             # Duration in human-readable format
+            duration_showed = False
             duration_sec = metadata.get("Track:Duration") or metadata.get(
                 "QuickTime:Duration"
             )
             if duration_sec:
+                duration_showed = True
                 readable = format_duration(duration_sec)
-                results.append(f"⏳ Duration: {readable}")
+                results.append(f"⏳ Duration:: {readable}")
                 try:
                     if float(duration_sec) < 1.0:
                         results.append(
@@ -342,7 +346,7 @@ def analyze_media_metadata(file_path: str, file_name: str):
             ]:
                 for key in metadata:
                     if key.lower().endswith(tag.lower()):
-                        if tag == "Duration":
+                        if tag == "Duration" and not duration_showed:
                             results.append(
                                 f"⏳ {tag}: {format_duration(metadata[key])}"
                             )
