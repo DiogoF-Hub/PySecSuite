@@ -44,14 +44,14 @@ with st.form("cli_form"):
         with col2:
             end_ip_input = st.text_input(
                 "End IP",
-                value="45.33.32.159",
+                value="45.33.32.156",
                 help="End of the IP range (IPv4). Must be ≥ Start IP.",
             )
         target_input = None
     else:
         target_input = st.text_input(
-            "Target (single IP or CIDR, e.g. 45.33.32.156 or 45.33.32.156/24)",
-            value="45.33.32.156/24",
+            "Target (single IP or CIDR, e.g. 45.33.32.156  or 45.33.32.156/32)",
+            value="45.33.32.156/32",
             help="Enter a single IP or a CIDR range.",
         )
         start_ip_input = end_ip_input = None
@@ -78,7 +78,8 @@ if run_cli:
     # ──────────────────────────────────────────────────────────────────────────
     # CLEAR OUT EXISTING CSVs IN results_folder BEFORE STARTING
     # ──────────────────────────────────────────────────────────────────────────
-    results_folder = PROJECT_ROOT / "Modules" / "scanner" / "results"
+    results_folder = Path("Modules/scanner/results")
+
     if results_folder.exists():
         for file_path in results_folder.glob("*"):
             try:
@@ -147,6 +148,9 @@ if run_cli:
     # ──────────────────────────────────────────────────────────────────────────
     # RUN scanner.py FOR EACH TARGET
     # ──────────────────────────────────────────────────────────────────────────
+    SCANNER_PATH = Path("Modules/scanner/scanner.py")
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
     any_error = False
     for tgt in targets_to_scan:
         cmd = (
@@ -196,7 +200,6 @@ if run_cli:
     st.markdown("---")
     st.subheader("📄 Scan Results (`<IP>_ports.csv`)")
 
-    results_folder = PROJECT_ROOT / "Modules" / "scanner" / "results"
     if not results_folder.exists():
         st.info(
             "No `Modules/scanner/results/` folder found. (scanner.py may not have created it.)"
