@@ -6,7 +6,7 @@ import os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 UPLOAD_DIR = os.path.join(root_dir, "Uploads")
 
-st.set_page_config(page_title="PySecSuite - Forensic Tools", layout="wide")
+st.set_page_config(page_title="PySecSuite - Forensic Tools", layout="centered")
 
 st.title("🔍 PySecSuite - Forensic Toolkit")
 
