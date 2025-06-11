@@ -45,7 +45,7 @@ The primary goal of PySecSuite is to provide an extendable and practical cyberse
 ✔️ **Wi-Fi Handshake Cracker**
 ✔️ **OSINT Toolkit**
 ✔️ **Modular and Extendable**
-✔️ **Command-Line Interface (CLI) with Interactive Output**
+✔️ **Streamlit webpage Output**
 
 ---
 
@@ -71,6 +71,7 @@ This project is **strictly for educational and ethical use**. The developers do 
 ### 🔹 Password Cracker
 - **Brute-force hash guessing** (Supports various algorithms)
 - Dictionary attacks using common password lists
+- **Password Spraying** on websites
 
 ### 🔹 Forensic File Analyzer
 - Extracts **metadata from suspicious files**
@@ -100,16 +101,25 @@ This project is **strictly for educational and ethical use**. The developers do 
 ---
 
 ## 🚀 Installation
+
+Follow these steps to get PySecSuite up and running:
+
+### 1. Clone the Repository
 ```sh
-# Clone the repository
 git clone https://github.com/yourusername/PySecSuite.git
 cd PySecSuite
 
-# Install dependencies
+# Install the dependencies
 pip install -r requirements.txt
 
-# Run the toolkit
-python pysecsuite.py
+# Install ExifTool (Required for Forensic Analysis Module)
+Download Windows installer (automatic install) -> https://oliverbetz.de/pages/Artikel/ExifTool-for-Windows
+Official ExifTool Site (manual install) -> https://exiftool.org/
+#Make sure exiftool.exe is in your system's PATH or placed in the project root.
+
+# Launch the Toolkit
+streamlit run .\Home.py
+# The interface will open in your default browser.
 ```
 
 ---
