@@ -1,5 +1,7 @@
 import streamlit as st
 import subprocess, tempfile, os, sys, json
+import pandas as pd
+import numpy as np
 
 st.set_page_config(layout="wide")
 
@@ -55,8 +57,8 @@ def run_cli(script, flag, value):
 # ───────────────────────────────────────────────────────────
 def html_metric(label, value):
     st.markdown(
-        f"<p style='color:#0000FF; font-size:24px; margin:0;'>{label}</p>"
-        f"<p style='font-size:14px; margin:0;'>{value}</p>",
+        f"<p style='color:#FFFFFF; font-size:24px; margin:0;'>{label}</p>"
+        f"<p style='font-size:15px; margin:0;'>{value}</p>",
         unsafe_allow_html=True,
     )
 
@@ -95,7 +97,9 @@ if run_all:
     # ───────────────────────────────────────────────────────────
     if domain:
         st.markdown(
-            "<h2 style='color:#FFFF00;'>🌐 Domain Results</h2>", unsafe_allow_html=True
+            "<h1 style='color:#FFFFFF; font-weight:bold; font-size:3em; text-align:center;'>"
+            "🌐🏷️ Domain Results 🏷️🌐</h1>",
+            unsafe_allow_html=True,
         )
         res = run_cli(
             os.path.join("Modules", "osint_toolkit", "DomainWeb_OSINT.py"),
@@ -108,46 +112,86 @@ if run_all:
             whois = res.get("whois", {})
             ip_info = res.get("ip", {})
             metadata = res.get("metadata", {})
+
             # WHOIS metrics
             c1, c2, c3 = st.columns(3)
             with c1:
-                html_metric("Registrar", whois.get("registrar", "N/A"))
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>Registrar</span>",
+                    unsafe_allow_html=True,
+                )
+                html_metric("", whois.get("registrar", "N/A"))
             with c2:
-                html_metric("Created", whois.get("creation_date", "N/A"))
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>Created</span>",
+                    unsafe_allow_html=True,
+                )
+                html_metric("", whois.get("creation_date", "N/A"))
             with c3:
-                html_metric("Expires", whois.get("expiration_date", "N/A"))
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>Expires</span>",
+                    unsafe_allow_html=True,
+                )
+                html_metric("", whois.get("expiration_date", "N/A"))
+
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Nameservers:</strong> {whois.get('nameservers',[])}</p>",
+                "<p style='font-size:15px;; color:#FFFFFF;'><strong>🖧 Nameservers:</strong> "
+                f"{whois.get('nameservers', [])}</p>",
                 unsafe_allow_html=True,
             )
+
             # IP & Geo metrics
             st.markdown(
-                "<h3 style='color:#FFFF00;'>IP & Geo</h3>", unsafe_allow_html=True
+                "<h2 style='color:#FFFFFF; font-weight:bold;font-size:20px; font-size:1.5em;'>"
+                "🛰️ IP & Geo 🛰️</h2>",
+                unsafe_allow_html=True,
             )
             d1, d2, d3 = st.columns(3)
             with d1:
-                html_metric("IP Address", ip_info.get("address", "N/A"))
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>IP Address</span>",
+                    unsafe_allow_html=True,
+                )
+                html_metric("", ip_info.get("address", "N/A"))
             with d2:
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>Location</span>",
+                    unsafe_allow_html=True,
+                )
                 html_metric(
-                    "Location",
+                    "",
                     f"{ip_info.get('city','N/A')}, {ip_info.get('country','N/A')}",
                 )
             with d3:
-                html_metric("ISP", ip_info.get("isp", "N/A"))
-            html_metric("Timezone", ip_info.get("timezone", "N/A"))
-            # Metadata
+                st.markdown(
+                    "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>ISP</span>",
+                    unsafe_allow_html=True,
+                )
+                html_metric("", ip_info.get("isp", "N/A"))
+            # standalone Timezone metric
             st.markdown(
-                "<h3 style='color:#FFFF00;'>Website Metadata</h3>",
+                "<span style='color:#FFFFFF; font-weight:bold;font-size:20px;'>Timezone</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", ip_info.get("timezone", "N/A"))
+
+            # Website Metadata
+            st.markdown(
+                "<h2 style='color:#FFFFFF; font-weight:bold; font-size:20px;'>"
+                "Metadata</h2>",
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Title:</strong> {metadata.get('title','N/A')}</p>",
+                f"<p style='font-size:15px; color:#FFFFFF;'><strong>📝 Title:</strong> "
+                f"{metadata.get('title','N/A')}</p>",
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Description:</strong> {metadata.get('description','N/A')}</p>",
+                f"<p style='font-size:15px; color:#FFFFFF;'><strong>🗒️ Description:</strong> "
+                f"{metadata.get('description','N/A')}</p>",
                 unsafe_allow_html=True,
             )
+
         st.markdown("---")
 
     # ───────────────────────────────────────────────────────────
@@ -155,7 +199,10 @@ if run_all:
     # ───────────────────────────────────────────────────────────
     if email:
         st.markdown(
-            "<h2 style='color:#FFFF00;'>✉️ Email Results</h2>", unsafe_allow_html=True
+            # Title: white, bold, 48px, centered
+            "<h1 style='color:#FFFFFF; font-weight:bold; font-size:48px; text-align:center;'>"
+            "📧✉️ Email Results ✉️📧</h1>",
+            unsafe_allow_html=True,
         )
         res = run_cli(
             os.path.join("Modules", "osint_toolkit", "Email_OSINT.py"), "--email", email
@@ -165,19 +212,30 @@ if run_all:
         else:
             breaches = res.get("breaches", [])
             links = res.get("social_links", [])
-            html_metric("Breaches Found", len(breaches))
+
+            st.markdown(
+                f"<p style='color:#FFFFFF; font-size:20px; font-weight:bold;'>🔓 Breaches Found: {len(breaches)}</p>",
+                unsafe_allow_html=True,
+            )
+
             if breaches:
+                # Breached Sites label: white, bold, 20px
                 st.markdown(
-                    "<p style='font-size:14px;'><strong>Breached Sites:</strong></p>",
+                    "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>"
+                    "🔓 Breached Sites:</span>",
                     unsafe_allow_html=True,
                 )
+                # Each bullet: white, 18px
                 for b in breaches:
                     st.markdown(
-                        f"<p style='font-size:12px;'>- {b.get('site')} on {b.get('date')}</p>",
+                        f"<p style='color:#FFFFFF; font-size:18px;'>• {b.get('site')} on {b.get('date')}</p>",
                         unsafe_allow_html=True,
                     )
+
+            # Social Links label & value: white, 18px
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Social Links:</strong> {links}</p>",
+                "<p style='color:#FFFFFF; font-size:18px;'>"
+                f"<strong>🌐 Social Links:</strong> {links}</p>",
                 unsafe_allow_html=True,
             )
         st.markdown("---")
@@ -186,8 +244,11 @@ if run_all:
     # IP Results
     # ───────────────────────────────────────────────────────────
     if ip_input:
+        # Title
         st.markdown(
-            "<h2 style='color:#FFFF00;'>🔢 IP Results</h2>", unsafe_allow_html=True
+            "<h1 style='color:#FFFFFF; font-weight:bold; font-size:48px; text-align:center;'>"
+            "🔢🌐 IP Results 🌐🔢</h1>",
+            unsafe_allow_html=True,
         )
         res = run_cli(
             os.path.join("Modules", "osint_toolkit", "IP_OSINT.py"), "--ip", ip_input
@@ -197,21 +258,58 @@ if run_all:
         else:
             geo = res.get("geolocation", {})
             rdns = res.get("reverse_dns", "N/A")
-            html_metric("IP Address", ip_input)
-            html_metric(
-                "Location", f"{geo.get('city','N/A')}, {geo.get('country','N/A')}"
+
+            # Remove default margins on all p/span
+            st.markdown(
+                """
+                <style>
+                p, span { margin: 0 !important; padding: 0 !important; }
+                </style>
+                """,
+                unsafe_allow_html=True,
             )
-            html_metric("ISP", geo.get("isp", "N/A"))
-            html_metric("Reverse DNS", rdns)
+
+            # IP Address
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>IP Address</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", ip_input)
+
+            # Location
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Location</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", f"{geo.get('city','N/A')}, {geo.get('country','N/A')}")
+
+            # ISP
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>ISP</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", geo.get("isp", "N/A"))
+
+            # Reverse DNS
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Reverse DNS</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", rdns)
+
         st.markdown("---")
 
     # ───────────────────────────────────────────────────────────
     # PHONE Results
     # ───────────────────────────────────────────────────────────
     if phone:
+        # Title
         st.markdown(
-            "<h2 style='color:#FFFF00;'>📱 Phone Results</h2>", unsafe_allow_html=True
+            "<h1 style='color:#FFFFFF; font-weight:bold; font-size:48px; text-align:center;'>"
+            "📱 Phone Results 📱</h1>",
+            unsafe_allow_html=True,
         )
+
         res = run_cli(
             os.path.join("Modules", "osint_toolkit", "PhoneNumbers_OSINT.py"),
             "--phone",
@@ -220,38 +318,116 @@ if run_all:
         if "error" in res:
             st.error(res["error"])
         else:
-            html_metric("E.164", res.get("E.164", "N/A"))
-            html_metric("International", res.get("International", "N/A"))
-            html_metric("Region", res.get("Region", "N/A"))
-            html_metric("Carrier", res.get("Carrier", "N/A"))
+            # Remove default margins on all p/span
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Timezones:</strong> {res.get('Timezones',[])}</p>",
+                """
+                <style>
+                p, span { margin: 0 !important; padding: 0 !important; }
+                </style>
+                """,
                 unsafe_allow_html=True,
             )
+
+            # E.164
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Line type:</strong> {res.get('Line type','N/A')}</p>",
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>E.164</span>",
                 unsafe_allow_html=True,
             )
+            html_metric("", res.get("E.164", "N/A"))
+
+            # International
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>International</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", res.get("International", "N/A"))
+
+            # Region
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Region</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", res.get("Region", "N/A"))
+
+            # Carrier
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Carrier</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", res.get("Carrier", "N/A"))
+
+            # Timezones
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Timezones</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", str(res.get("Timezones", [])))
+
+            # Line type
+            st.markdown(
+                "<span style='color:#FFFFFF; font-weight:bold; font-size:20px;'>Line type</span>",
+                unsafe_allow_html=True,
+            )
+            html_metric("", res.get("Line type", "N/A"))
+
         st.markdown("---")
 
     # ───────────────────────────────────────────────────────────
     # SOCIAL MEDIA Results
     # ───────────────────────────────────────────────────────────
+
     if username:
-        st.markdown(
-            "<h2 style='color:#FFFF00;'>👤 Social Media Results</h2>",
-            unsafe_allow_html=True,
-        )
-        res = run_cli(
+        st.markdown("### 👤 Social Media Results", unsafe_allow_html=True)
+        raw = run_cli(
             os.path.join("Modules", "osint_toolkit", "SocialMedia_OSINT.py"),
             "--username",
             username,
         )
-        if "error" in res:
-            st.error(res["error"])
+
+        if "error" in raw:
+            st.error(raw["error"])
         else:
-            for plat, status in res.items():
-                html_metric(plat.title(), status)
+            # build DataFrame
+            df = pd.DataFrame(raw["results"])
+            df = df.rename(
+                columns={
+                    "platform": "Platform",
+                    "status": "Status",
+                    "url": "Profile URL",
+                }
+            )
+
+            # 1) Keep the raw status around for logic
+            df["RawStatus"] = df["Status"]
+
+            # 2) Capitalize & bold the Platform column (vectorized)
+            df["Platform"] = "<strong>" + df["Platform"].str.title() + "</strong>"
+
+            # 3) Map statuses to emojis & pretty text (vectorized)
+            emoji_map = {"found": "✅", "not_found": "❌", "error": "⚠️"}
+            df["Status"] = (
+                df["RawStatus"].map(emoji_map).fillna("")
+                + " "
+                + df["RawStatus"].str.replace("_", " ").str.title()
+            )
+
+            # 4) Build the “Visit” link for all URLs (vectorized)
+            visit_links = (
+                '<a href="' + df["Profile URL"] + '" target="_blank">Visit</a>'
+            )
+            # 5) Only keep the link where RawStatus is found or error
+            mask = df["RawStatus"].isin(["found", "error"])
+            df["Profile URL"] = np.where(mask, visit_links, "—")
+
+            # 6) Render as HTML table
+            html = df.to_html(
+                columns=["Platform", "Status", "Profile URL"],
+                index=False,
+                escape=False,
+                justify="left",
+            )
+            st.markdown(html, unsafe_allow_html=True)
+
         st.markdown("---")
 
     # ───────────────────────────────────────────────────────────
@@ -259,7 +435,7 @@ if run_all:
     # ───────────────────────────────────────────────────────────
     if uploaded_img:
         st.markdown(
-            "<h2 style='color:#FFFF00;'>🖼️ Image Results</h2>", unsafe_allow_html=True
+            "<h2 style='color:#FFFFFF;'>🖼️ Image Results</h2>", unsafe_allow_html=True
         )
         suffix = os.path.splitext(uploaded_img.name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -273,9 +449,10 @@ if run_all:
         link = res.get("result_url") or res.get("url")
         if link:
             st.markdown(
-                f"<p style='font-size:14px;'><strong>Image Link:</strong> <a href='{link}' target='_blank'>{link}</a></p>",
+                f"<p style='font-size:20px;'><strong>Image Link:</strong> <a href='{link}' target='_blank'>{link}</a></p>",
                 unsafe_allow_html=True,
             )
         else:
             st.error(res.get("error", "Failed to get image link"))
         os.remove(img_path)
+        st.markdown("---")
