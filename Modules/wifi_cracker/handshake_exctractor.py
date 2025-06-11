@@ -1,5 +1,11 @@
 from scapy.all import rdpcap, EAPOL
 from scapy.layers.dot11 import Dot11, Dot11Beacon, Dot11Elt
+import os
+
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+uploads_dir = os.path.join(root_dir, "Uploads")
+assets_dir = os.path.join(root_dir, "Assets")
+wordlist_dir = os.path.join(assets_dir, "Wordlists")
 
 
 def extract_handshakes_packets(pcap_file):
@@ -75,3 +81,8 @@ def is_valid_handshake(packets, ap_mac, client_mac):
         print("[-] Incomplete or invalid handshake.")
 
     return valid
+
+
+def crack_notdoneyet():
+    print("[!] This function is not implemented yet.")
+    return None
