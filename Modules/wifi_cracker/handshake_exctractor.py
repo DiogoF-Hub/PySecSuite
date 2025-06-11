@@ -83,6 +83,33 @@ def is_valid_handshake(packets, ap_mac, client_mac):
     return valid
 
 
-def crack_notdoneyet():
-    print("[!] This function is not implemented yet.")
-    return None
+def crack(pcap_path):
+    # 1. Check path
+    if not os.path.exists(pcap_path):
+        print(f"[-] File not found: {pcap_path}")
+        return
+
+    # 2. Extract the handshake-related packets and details
+    result = extract_handshakes_packets(pcap_path)
+
+    # 3. Check if a valid 4-way handshake is present
+    if not result["handshake_packets"]:
+        print("[-] No EAPOL packets found.")
+        return
+
+    result2 = is_valid_handshake(
+        result["handshake_packets"], result["ap_mac"], result["client_mac"]
+    )
+    if result2:
+        print("[✔] Ready to proceed with password cracking.")
+        print("⚠️ Cracking feature is not implemented yet.")
+        print(
+            "   This module currently only validates the PCAP for a usable WPA/WPA2 handshake."
+        )
+        print(
+            "   Cracking with Hashcat is only supported on Linux and was not completed in time."
+        )
+        print("   🔧 Feature coming soon in a future update!")
+
+    else:
+        print("[✘] Handshake not valid for cracking.")

@@ -12,8 +12,8 @@ def get_login_form(login_url):
 
     try:
         response = session.get(login_url, timeout=10)
-    except requests.RequestException as e:
-        return None, None, None, None  # Handle in calling function
+    except requests.RequestException:
+        return None, None, None, None
 
     soup = BeautifulSoup(response.text, "html.parser")
     form = soup.find("form")
@@ -38,12 +38,12 @@ def run_bruteforce(
     username,
     wordlist_path,
     update_progress,
+    log_output,  # NEW: logs each attempt
     user_field_override=None,
     pass_field_override=None,
     success_keyword="dashboard",
     delay=0,
 ):
-
     session, action, method, form_data = get_login_form(login_url)
     if None in (session, action, method, form_data):
         return "[!] Error loading or parsing the login form."
@@ -76,7 +76,10 @@ def run_bruteforce(
         try:
             response = session.post(full_action_url, data=form_data, timeout=10)
         except requests.RequestException:
-            continue  # Skip failed attempt
+            log_output.markdown(f"❌ Attempt {i+1}/{total}: Network error")
+            continue
+
+        log_output.markdown(f"🔄 Attempt {i+1}/{total}: `{password}`")
 
         if success_keyword.lower() in response.text.lower():
             update_progress(100)

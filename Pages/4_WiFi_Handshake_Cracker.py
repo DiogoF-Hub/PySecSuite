@@ -2,7 +2,7 @@ import os
 import streamlit as st
 from Modules.password_cracker.Utils.download import download_wordlist
 from Modules.wifi_cracker.handshake_exctractor import (
-    crack_notdoneyet,
+    crack,
     uploads_dir,
     wordlist_dir,
 )
@@ -86,7 +86,7 @@ crack_disabled = not (
 if st.button("🚀 Crack Handshake", disabled=crack_disabled):
     with st.spinner("🔄 Cracking handshake…"):
         try:
-            result = crack_notdoneyet(pcap_path, selected_wordlist_path)
+            result = crack(pcap_path, selected_wordlist_path)
             if result:
                 st.success(f"✅ Password found: **{result}**")
             else:
