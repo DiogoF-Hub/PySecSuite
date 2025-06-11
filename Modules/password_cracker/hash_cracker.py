@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
-result_dir = os.path.join(root_dir, "password_cracker", "Results")
+uploads_dir = os.path.join(root_dir, "Uploads")
+result_dir = os.path.join(root_dir, "Modules", "password_cracker", "Results")
 assets_dir = os.path.join(root_dir, "Assets")
 wordlist_dir = os.path.join(assets_dir, "wordlists")
 wordlist_file = os.path.join(wordlist_dir, "rockyou.txt")
@@ -32,7 +33,7 @@ def identify_hash_type(hash_string):
         return False
 
 
-def crack_single_hash(hash_line):
+def crack_single_hash(hash_line, wordlist_file):
     algorithm = identify_hash_type(hash_line)
     if not algorithm:
         return None
@@ -69,7 +70,7 @@ def crack_single_hash(hash_line):
         return None
 
 
-def multi_crack_hashes_streamed(save_results=False):
+def multi_crack_hashes_streamed(wordlist_file, hashes_file, save_results=False):
     if save_results:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         result_filename = f"cracked_hashes_{timestamp}.txt"
@@ -88,7 +89,7 @@ def multi_crack_hashes_streamed(save_results=False):
                 hash_line = hash_line.strip()
                 if not hash_line:
                     continue
-                result = crack_single_hash(hash_line)
+                result = crack_single_hash(hash_line, wordlist_file)
                 if result:
                     print(f"[=] {hash_line} => {result}")
                     if save_results:
@@ -96,5 +97,7 @@ def multi_crack_hashes_streamed(save_results=False):
                             result_file.write(f"{hash_line} => {result}\n")
                 else:
                     print(f"[-] {hash_line} => Not Found")
+        print("[~] Finished processing all hashes.")
+        return result_path if save_results else None
     except FileNotFoundError:
         print("[!] hashes.txt file not found.")
