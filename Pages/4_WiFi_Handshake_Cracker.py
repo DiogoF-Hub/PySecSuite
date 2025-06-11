@@ -16,6 +16,18 @@ with st.expander("ℹ️ What does this tool do?"):
     """
     )
 
+st.warning(
+    """ 
+⚠️ Cracking feature is not implemented yet.
+
+This module currently only validates the PCAP for a usable WPA/WPA2 handshake.
+
+Cracking with Hashcat is only supported on Linux and was not completed in time.
+
+🔧 Feature coming soon in a future update!
+"""
+)
+
 st.divider()
 
 # --- PCAP Upload ---
