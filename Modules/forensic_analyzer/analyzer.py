@@ -4,10 +4,12 @@ import zipfile
 import os
 import filetype
 
+# Define root and upload directories
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 upload_dir = os.path.join(root_dir, "Uploads")
 
 
+# Check if ExifTool is installed and functional
 def check_exiftool_installed():
     try:
         with ExifTool() as et:
@@ -16,17 +18,19 @@ def check_exiftool_installed():
         return False
 
 
+# Validate file extension by checking the actual file type
 def validate_file_extension(file_path: str):
     kind = filetype.guess(file_path)
     declared_ext = os.path.splitext(file_path)[1].lower()
     if declared_ext == ".docm":
         return True  # DOCM files are allowed to have macros, so we analyze them anyway
     if not kind:
-        return True  # Proceed with analysis anyway
+        return True  # Proceed with analysis anyway if filetype can't be guessed
     actual_ext = f".{kind.extension}"
     return actual_ext == declared_ext
 
 
+# Compare creation and modification times and return human-readable messages
 def compare_time_difference(time_difference: float):
     messages = []
     minutes = int(time_difference // 60)
@@ -57,6 +61,7 @@ def compare_time_difference(time_difference: float):
     return messages
 
 
+# Analyze image metadata and check timestamp consistency
 def analyze_image_metadata(file_path: str, file_name: str):
     results = [f"**🖼️ File:** {file_name}"]
     try:
@@ -90,6 +95,7 @@ def analyze_image_metadata(file_path: str, file_name: str):
     return results
 
 
+# Analyze PDF metadata and search for suspicious content
 def analyze_pdf_metadata(file_path: str, file_name: str):
     results = [f"**📄 Analyzing PDF:** {file_name}"]
     try:
@@ -115,6 +121,7 @@ def analyze_pdf_metadata(file_path: str, file_name: str):
                     "⚠️ Not enough timestamp information to perform consistency check."
                 )
 
+            # Check for embedded scripts and files
             results.append(
                 "🧠 JavaScript detected in the PDF."
                 if metadata.get("PDF:JavaScript", "").lower() == "yes"
@@ -131,6 +138,7 @@ def analyze_pdf_metadata(file_path: str, file_name: str):
                 else "✔️ No interactive XFA forms detected in the PDF."
             )
 
+        # Check raw PDF for suspicious keywords
         suspicious_keywords = [
             "powershell",
             "cmd",
@@ -158,6 +166,7 @@ def analyze_pdf_metadata(file_path: str, file_name: str):
     return results
 
 
+# Analyze DOCX metadata and search for embedded content
 def analyze_docx_metadata(file_path: str, file_name: str):
     results = [f"**📄 Analyzing DOCX file:** {file_name}"]
     try:
@@ -189,6 +198,7 @@ def analyze_docx_metadata(file_path: str, file_name: str):
     except Exception as e:
         results.append(f"❌ Failed to extract metadata: {e}")
 
+    # Inspect the DOCX zip structure for macros, embedded files, and suspicious strings
     try:
         with zipfile.ZipFile(file_path, "r") as zip_ref:
             file_list = zip_ref.namelist()
@@ -244,6 +254,7 @@ def analyze_docx_metadata(file_path: str, file_name: str):
     return results
 
 
+# Convert a duration in seconds into a human-readable string
 def format_duration(seconds_str):
     try:
         # Convert the input string to a float
@@ -270,7 +281,7 @@ def format_duration(seconds_str):
         return f"{seconds_str} (unreadable)"
 
 
-# MP4, MP3, WAV, MKV, M4A
+# Analyze audio/video files using multiple metadata tags
 def analyze_media_metadata(file_path: str, file_name: str):
     kind = filetype.guess(file_path)
     media_label = kind.mime if kind else "Unknown Media"
@@ -288,7 +299,6 @@ def analyze_media_metadata(file_path: str, file_name: str):
                 or metadata.get("ID3:Date")
                 or metadata.get("File:FileCreateDate")
             )
-
             modify_raw = (
                 metadata.get("QuickTime:ModifyDate")
                 or metadata.get("Track:ModifyDate")
@@ -299,7 +309,6 @@ def analyze_media_metadata(file_path: str, file_name: str):
             results.append(f"🕓 Modify Date   : {modify_raw}")
 
             now = datetime.now()
-
             if creation_raw and modify_raw:
                 creation_clean = creation_raw.split("+")[0].strip()
                 modify_clean = modify_raw.split("+")[0].strip()
@@ -307,7 +316,6 @@ def analyze_media_metadata(file_path: str, file_name: str):
                 modify_dt = datetime.strptime(modify_clean, "%Y:%m:%d %H:%M:%S")
                 time_difference = (modify_dt - creation_dt).total_seconds()
                 results.extend(compare_time_difference(time_difference))
-
                 if creation_dt > now:
                     results.append("⚠️ Suspicious: Creation time is in the future.")
                 if modify_dt > now:
@@ -317,7 +325,6 @@ def analyze_media_metadata(file_path: str, file_name: str):
                     "⚠️ Not enough timestamp information to perform consistency check."
                 )
 
-            # Duration in human-readable format
             duration_showed = False
             duration_sec = metadata.get("Track:Duration") or metadata.get(
                 "QuickTime:Duration"
@@ -334,7 +341,6 @@ def analyze_media_metadata(file_path: str, file_name: str):
                 except:
                     pass
 
-            # Add media metadata if present
             for tag in [
                 "Format",
                 "Duration",
@@ -353,12 +359,12 @@ def analyze_media_metadata(file_path: str, file_name: str):
                             continue
                         results.append(f"🎧 {tag}: {metadata[key]}")
                         break
-
     except Exception as e:
         results.append(f"❌ Failed to analyze {media_label} metadata: {e}")
     return results
 
 
+# Main dispatcher for analyzing any supported file type
 def analyze_file(file_name: str):
     file_path = os.path.join(upload_dir, file_name)
 
